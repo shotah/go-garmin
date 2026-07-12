@@ -26,6 +26,12 @@ type OAuth1Signer struct {
 
 // Sign adds OAuth1 authorization header to the request
 func (s *OAuth1Signer) Sign(req *http.Request) {
+	s.SignWithParams(req, nil)
+}
+
+// SignWithParams signs the request, including application/x-www-form-urlencoded body params
+// in the OAuth1 signature base string (required for exchange/user/2.0).
+func (s *OAuth1Signer) SignWithParams(req *http.Request, bodyParams url.Values) {
 	params := s.buildOAuthParams()
 
 	// Collect all parameters for signature base string
@@ -41,9 +47,12 @@ func (s *OAuth1Signer) Sign(req *http.Request) {
 		}
 	}
 
-	// Note: For POST requests with form data, body params should be included in the signature.
-	// Since the body is a reader we can't peek, the caller should ensure body params
-	// are included in query string for signature calculation if needed.
+	// Add form body parameters
+	for k, vs := range bodyParams {
+		for _, v := range vs {
+			allParams.Add(k, v)
+		}
+	}
 
 	// Generate signature
 	signature := s.generateSignature(req.Method, req.URL, allParams)

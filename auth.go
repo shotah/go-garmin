@@ -10,13 +10,14 @@ import (
 )
 
 type authState struct {
-	OAuth1Token        string    `json:"oauth1_token"`
-	OAuth1Secret       string    `json:"oauth1_secret"`
+	OAuth1Token        string    `json:"oauth1_token,omitempty"` // legacy; unused after DI auth
+	OAuth1Secret       string    `json:"oauth1_secret,omitempty"`
 	MFAToken           string    `json:"mfa_token,omitempty"`
 	OAuth2AccessToken  string    `json:"oauth2_access_token"`
 	OAuth2RefreshToken string    `json:"oauth2_refresh_token"`
 	OAuth2Expiry       time.Time `json:"oauth2_expiry"`
 	OAuth2Scope        string    `json:"oauth2_scope,omitempty"`
+	DIClientID         string    `json:"di_client_id,omitempty"`
 	Domain             string    `json:"domain"`
 }
 
@@ -36,7 +37,7 @@ func (a *authState) isExpired() bool {
 }
 
 func (a *authState) isAuthenticated() bool {
-	return a.OAuth1Token != "" && a.OAuth2AccessToken != ""
+	return a.OAuth2AccessToken != ""
 }
 
 const oauthConsumerURL = "https://thegarth.s3.amazonaws.com/oauth_consumer.json"

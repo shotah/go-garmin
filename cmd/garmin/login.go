@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -45,7 +44,7 @@ func runLogin(_ *cobra.Command, _ []string) error {
 	email = strings.TrimSpace(email)
 
 	fmt.Fprint(os.Stderr, "Password: ")
-	passwordBytes, err := term.ReadPassword(syscall.Stdin)
+	passwordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
 		return fmt.Errorf("failed to read password: %w", err)
 	}

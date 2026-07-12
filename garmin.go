@@ -128,8 +128,7 @@ func (c *Client) doAPI(ctx context.Context, method, path string, body io.Reader)
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.auth.OAuth2AccessToken)
-	req.Header.Set("User-Agent", "GCM-iOS-5.19.1.2")
+	applyAPIAuthHeaders(req, c.auth.OAuth2AccessToken)
 
 	return c.transport.do(req)
 }
@@ -152,9 +151,8 @@ func (c *Client) doAPIWithBody(ctx context.Context, method, path string, body io
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.auth.OAuth2AccessToken)
+	applyAPIAuthHeaders(req, c.auth.OAuth2AccessToken)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "GCM-iOS-5.19.1.2")
 	req.Header.Set("nk", "NT")
 
 	return c.transport.do(req)
@@ -191,43 +189,44 @@ func (c *Client) doAPIMultipart(ctx context.Context, path, fieldName, fileName s
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.auth.OAuth2AccessToken)
+	applyAPIAuthHeaders(req, c.auth.OAuth2AccessToken)
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.Header.Set("User-Agent", "GCM-iOS-5.19.1.2")
 	req.Header.Set("nk", "NT")
 
 	return c.transport.do(req)
 }
 
-// refreshOAuth2 re-exchanges OAuth1 for a fresh OAuth2 token.
-//
-//nolint:unused // Will be used by service implementations
+func applyAPIAuthHeaders(req *http.Request, accessToken string) {
+	applyNativeHeaders(req)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/json")
+}
+
+// refreshOAuth2 refreshes the DI bearer token using the stored refresh token.
 func (c *Client) refreshOAuth2(ctx context.Context) error {
+	if c.auth.OAuth2RefreshToken == "" || c.auth.DIClientID == "" {
+		return fmt.Errorf("garmin: missing DI refresh token or client id")
+	}
+
 	sso, err := newSSOClient(c.auth.Domain, c.transport.client.Timeout, c.transport.client)
 	if err != nil {
 		return err
 	}
 
-	consumer, err := fetchOAuthConsumer(ctx, c.transport.client)
-	if err != nil {
-		return err
-	}
-
-	oauth1 := &OAuth1Token{
-		Token:    c.auth.OAuth1Token,
-		Secret:   c.auth.OAuth1Secret,
-		MFAToken: c.auth.MFAToken,
-	}
-
-	oauth2, err := sso.exchangeOAuth1ForOAuth2(ctx, oauth1, consumer)
+	oauth2, err := sso.refreshDIToken(ctx, c.auth.OAuth2RefreshToken, c.auth.DIClientID)
 	if err != nil {
 		return err
 	}
 
 	c.auth.OAuth2AccessToken = oauth2.AccessToken
-	c.auth.OAuth2RefreshToken = oauth2.RefreshToken
+	if oauth2.RefreshToken != "" {
+		c.auth.OAuth2RefreshToken = oauth2.RefreshToken
+	}
 	c.auth.OAuth2Expiry = oauth2.Expiry
 	c.auth.OAuth2Scope = oauth2.Scope
+	if oauth2.ClientID != "" {
+		c.auth.DIClientID = oauth2.ClientID
+	}
 
 	return nil
 }

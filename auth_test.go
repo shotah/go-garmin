@@ -63,7 +63,7 @@ func TestAuthStateIsAuthenticated(t *testing.T) {
 
 	auth.OAuth2AccessToken = "access"
 	if !auth.isAuthenticated() {
-		t.Error("expected auth state with both tokens to be authenticated")
+		t.Error("expected auth state with DI/OAuth2 access token to be authenticated")
 	}
 }
 

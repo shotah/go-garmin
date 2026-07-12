@@ -1,8 +1,17 @@
-// sso.go - Garmin SSO authentication flow
+// sso.go - Garmin SSO authentication (mobile iOS + DI OAuth).
+//
+// Matches cyberjunky/python-garminconnect ≥0.3 after the March 2026 auth break:
+//   1. POST sso…/mobile/api/login (clientId=GCM_IOS_DARK)
+//   2. Optional POST …/mobile/api/mfa/verifyCode
+//   3. POST diauth…/di-oauth2-service/oauth/token (grant_type=service_ticket)
+//
+// The legacy connectapi oauth-service OAuth1→OAuth2 exchange returns 401 for new logins.
 package garmin
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +23,23 @@ import (
 	"strings"
 	"time"
 )
+
+const (
+	iosSSOClientID  = "GCM_IOS_DARK"
+	iosServiceURL   = "https://mobile.integration.garmin.com/gcm/ios"
+	iosLoginUA      = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+	nativeAPIUA     = "GCM-Android-5.23"
+	nativeXGarminUA = "com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0"
+
+	diGrantType = "https://connectapi.garmin.com/di-oauth2-service/oauth/grant/service_ticket"
+)
+
+var diClientIDs = []string{
+	"GARMIN_CONNECT_MOBILE_ANDROID_DI_2025Q2",
+	"GARMIN_CONNECT_MOBILE_ANDROID_DI_2024Q4",
+	"GARMIN_CONNECT_MOBILE_ANDROID_DI",
+	"GARMIN_CONNECT_MOBILE_IOS_DI",
+}
 
 var (
 	csrfRE   = regexp.MustCompile(`name="_csrf"\s+value="([^"]+)"`)
@@ -69,7 +95,6 @@ func newSSOClient(domain string, timeout time.Duration, baseClient *http.Client)
 
 	var httpClient *http.Client
 	if baseClient != nil {
-		// Reuse the base client's transport (for VCR) but add our own cookie jar
 		httpClient = &http.Client{
 			Transport: baseClient.Transport,
 			Jar:       jar,
@@ -89,365 +114,374 @@ func newSSOClient(domain string, timeout time.Duration, baseClient *http.Client)
 	}, nil
 }
 
-// ssoLogin performs the full SSO login flow and returns OAuth1 and OAuth2 tokens
+func (s *ssoClient) serviceURL() string {
+	if s.domain == "garmin.cn" {
+		return "https://mobile.integration.garmin.cn/gcm/ios"
+	}
+	return iosServiceURL
+}
+
+func (s *ssoClient) diTokenURL() string {
+	return fmt.Sprintf("https://diauth.%s/di-oauth2-service/oauth/token", s.domain)
+}
+
+// ssoLogin performs mobile SSO + DI token exchange.
 func (c *Client) ssoLogin(ctx context.Context, email, password string) error {
 	sso, err := newSSOClient(c.opts.Domain, 30*time.Second, c.transport.client)
 	if err != nil {
 		return err
 	}
 
-	// Step 1-4: Perform SSO authentication and get ticket
 	ticket, err := sso.authenticate(ctx, email, password, c.opts.MFAHandler)
 	if err != nil {
 		return err
 	}
 
-	// Step 5: Fetch OAuth consumer credentials
-	consumer, err := fetchOAuthConsumer(ctx, sso.httpClient)
+	token, err := sso.exchangeServiceTicket(ctx, ticket, sso.serviceURL())
 	if err != nil {
-		return fmt.Errorf("failed to fetch OAuth consumer: %w", err)
+		return fmt.Errorf("failed to exchange service ticket for DI token: %w", err)
 	}
 
-	// Step 6: Get OAuth1 token using ticket
-	oauth1Token, err := sso.getOAuth1Token(ctx, ticket, consumer)
-	if err != nil {
-		return fmt.Errorf("failed to get OAuth1 token: %w", err)
-	}
-
-	// Step 7: Exchange OAuth1 for OAuth2 token
-	oauth2Token, err := sso.exchangeOAuth1ForOAuth2(ctx, oauth1Token, consumer)
-	if err != nil {
-		return fmt.Errorf("failed to exchange for OAuth2 token: %w", err)
-	}
-
-	// Update client auth state
-	c.auth.OAuth1Token = oauth1Token.Token
-	c.auth.OAuth1Secret = oauth1Token.Secret
-	c.auth.MFAToken = oauth1Token.MFAToken
-	c.auth.OAuth2AccessToken = oauth2Token.AccessToken
-	c.auth.OAuth2RefreshToken = oauth2Token.RefreshToken
-	c.auth.OAuth2Expiry = oauth2Token.Expiry
-	c.auth.OAuth2Scope = oauth2Token.Scope
+	c.auth.OAuth1Token = ""
+	c.auth.OAuth1Secret = ""
+	c.auth.MFAToken = ""
+	c.auth.OAuth2AccessToken = token.AccessToken
+	c.auth.OAuth2RefreshToken = token.RefreshToken
+	c.auth.OAuth2Expiry = token.Expiry
+	c.auth.OAuth2Scope = token.Scope
+	c.auth.DIClientID = token.ClientID
 	c.auth.Domain = c.opts.Domain
 
 	return nil
 }
 
-// authenticate performs steps 1-4 of the SSO flow
-func (s *ssoClient) authenticate(ctx context.Context, email, password string, mfaHandler func() (string, error)) (string, error) {
-	ssoBase := fmt.Sprintf("https://sso.%s/sso", s.domain)
-	ssoEmbed := ssoBase + "/embed"
-
-	// Build query params
-	embedParams := url.Values{
-		"id":          {"gauth-widget"},
-		"embedWidget": {"true"},
-		"gauthHost":   {ssoBase},
-	}
-
-	signinParams := url.Values{
-		"id":                              {"gauth-widget"},
-		"embedWidget":                     {"true"},
-		"gauthHost":                       {ssoEmbed},
-		"service":                         {ssoEmbed},
-		"source":                          {ssoEmbed},
-		"redirectAfterAccountLoginUrl":    {ssoEmbed},
-		"redirectAfterAccountCreationUrl": {ssoEmbed},
-	}
-
-	// Step 1: Set cookies - GET embed page
-	embedURL := ssoEmbed + "?" + embedParams.Encode()
-	if _, err := s.doGet(ctx, embedURL, ""); err != nil {
-		return "", fmt.Errorf("failed to set cookies: %w", err)
-	}
-
-	// Step 2: Get CSRF token - GET signin page
-	signinURL := ssoBase + "/signin?" + signinParams.Encode()
-	signinHTML, err := s.doGet(ctx, signinURL, embedURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to get signin page: %w", err)
-	}
-
-	csrf, err := extractCSRF(signinHTML)
-	if err != nil {
-		return "", err
-	}
-
-	// Step 3: Submit credentials - POST to signin
-	formData := url.Values{
-		"username": {email},
-		"password": {password},
-		"embed":    {"true"},
-		"_csrf":    {csrf},
-	}
-
-	responseHTML, err := s.doPost(ctx, signinURL, signinURL, formData)
-	if err != nil {
-		return "", fmt.Errorf("failed to submit credentials: %w", err)
-	}
-
-	title, err := extractTitle(responseHTML)
-	if err != nil {
-		return "", err
-	}
-
-	// Step 4: Handle MFA if required
-	if strings.Contains(title, "MFA") {
-		responseHTML, title, err = s.handleMFA(ctx, responseHTML, ssoBase, signinURL, signinParams, mfaHandler)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	// Verify success
-	if title != "Success" {
-		return "", fmt.Errorf("%w: unexpected title %q", ErrLoginFailed, title)
-	}
-
-	// Extract ticket from success page
-	ticket, err := extractTicket(responseHTML)
-	if err != nil {
-		return "", err
-	}
-
-	return ticket, nil
+type mobileSSOStatus struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
 }
 
-// handleMFA processes the MFA challenge and returns the updated response HTML and title
-func (s *ssoClient) handleMFA(
-	ctx context.Context,
-	responseHTML, ssoBase, signinURL string,
-	signinParams url.Values,
-	mfaHandler func() (string, error),
-) (newHTML, title string, err error) {
-	if mfaHandler == nil {
-		return "", "", ErrMFARequired
+type mobileSSOResponse struct {
+	ResponseStatus  mobileSSOStatus `json:"responseStatus"`
+	ServiceTicketID string          `json:"serviceTicketId"`
+	CustomerMfaInfo *struct {
+		MfaLastMethodUsed string `json:"mfaLastMethodUsed"`
+	} `json:"customerMfaInfo"`
+	Error *struct {
+		StatusCode string `json:"status-code"`
+	} `json:"error"`
+}
+
+// authenticate performs mobile SSO login and returns a CAS service ticket.
+func (s *ssoClient) authenticate(ctx context.Context, email, password string, mfaHandler func() (string, error)) (string, error) {
+	ssoBase := fmt.Sprintf("https://sso.%s", s.domain)
+	serviceURL := s.serviceURL()
+
+	loginParams := url.Values{
+		"clientId": {iosSSOClientID},
+		"locale":   {"en-US"},
+		"service":  {serviceURL},
 	}
 
-	// Get CSRF for MFA form
-	mfaCSRF, err := extractCSRF(responseHTML)
+	loginURL := ssoBase + "/mobile/api/login?" + loginParams.Encode()
+	loginBody := map[string]any{
+		"username":     email,
+		"password":     password,
+		"rememberMe":   true,
+		"captchaToken": "",
+	}
+	respJSON, status, err := s.doSSOJSON(ctx, http.MethodPost, loginURL, loginBody)
 	if err != nil {
-		return "", "", err
+		return "", fmt.Errorf("failed to submit mobile login: %w", err)
+	}
+	if status == http.StatusTooManyRequests {
+		return "", fmt.Errorf("%w: mobile login rate limited (429)", ErrLoginFailed)
+	}
+	if status == http.StatusForbidden {
+		return "", fmt.Errorf("%w: mobile login blocked (403 Cloudflare)", ErrLoginFailed)
+	}
+
+	var parsed mobileSSOResponse
+	if err := json.Unmarshal(respJSON, &parsed); err != nil {
+		return "", fmt.Errorf("failed to parse mobile login response (HTTP %d): %w", status, err)
+	}
+	if parsed.Error != nil && parsed.Error.StatusCode == "429" {
+		return "", fmt.Errorf("%w: mobile login rate limited (429)", ErrLoginFailed)
+	}
+
+	switch parsed.ResponseStatus.Type {
+	case "SUCCESSFUL":
+		if parsed.ServiceTicketID == "" {
+			return "", fmt.Errorf("%w: empty service ticket", ErrLoginFailed)
+		}
+		return parsed.ServiceTicketID, nil
+	case "MFA_REQUIRED":
+		mfaMethod := "email"
+		if parsed.CustomerMfaInfo != nil && parsed.CustomerMfaInfo.MfaLastMethodUsed != "" {
+			mfaMethod = parsed.CustomerMfaInfo.MfaLastMethodUsed
+		}
+		return s.handleMobileMFA(ctx, loginParams, mfaMethod, mfaHandler)
+	case "INVALID_USERNAME_PASSWORD":
+		return "", fmt.Errorf("%w: invalid username or password", ErrLoginFailed)
+	case "CAPTCHA_REQUIRED":
+		return "", fmt.Errorf("%w: captcha required", ErrLoginFailed)
+	default:
+		msg := parsed.ResponseStatus.Type
+		if parsed.ResponseStatus.Message != "" {
+			msg = msg + ": " + parsed.ResponseStatus.Message
+		}
+		if msg == "" {
+			msg = fmt.Sprintf("HTTP %d", status)
+		}
+		return "", fmt.Errorf("%w: %s", ErrLoginFailed, msg)
+	}
+}
+
+func (s *ssoClient) handleMobileMFA(
+	ctx context.Context,
+	loginParams url.Values,
+	mfaMethod string,
+	mfaHandler func() (string, error),
+) (string, error) {
+	if mfaHandler == nil {
+		return "", ErrMFARequired
 	}
 
 	mfaCode, err := mfaHandler()
 	if err != nil {
-		return "", "", fmt.Errorf("MFA handler failed: %w", err)
+		return "", fmt.Errorf("MFA handler failed: %w", err)
 	}
 
-	mfaURL := ssoBase + "/verifyMFA/loginEnterMfaCode?" + signinParams.Encode()
-	mfaFormData := url.Values{
-		"mfa-code": {mfaCode},
-		"embed":    {"true"},
-		"_csrf":    {mfaCSRF},
-		"fromPage": {"setupEnterMfaCode"},
+	ssoBase := fmt.Sprintf("https://sso.%s", s.domain)
+	mfaURL := ssoBase + "/mobile/api/mfa/verifyCode?" + loginParams.Encode()
+	body := map[string]any{
+		"mfaMethod":           mfaMethod,
+		"mfaVerificationCode": mfaCode,
+		"rememberMyBrowser":   false,
+		"reconsentList":       []any{},
+		"mfaSetup":            false,
 	}
 
-	newHTML, err = s.doPost(ctx, mfaURL, signinURL, mfaFormData)
+	respJSON, status, err := s.doSSOJSON(ctx, http.MethodPost, mfaURL, body)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to submit MFA code: %w", err)
+		return "", fmt.Errorf("failed to submit MFA code: %w", err)
 	}
 
-	title, err = extractTitle(newHTML)
-	if err != nil {
-		return "", "", err
+	var parsed mobileSSOResponse
+	if err := json.Unmarshal(respJSON, &parsed); err != nil {
+		return "", fmt.Errorf("failed to parse MFA response (HTTP %d): %w", status, err)
 	}
-
-	return newHTML, title, nil
+	if parsed.ResponseStatus.Type != "SUCCESSFUL" || parsed.ServiceTicketID == "" {
+		msg := parsed.ResponseStatus.Type
+		if parsed.ResponseStatus.Message != "" {
+			msg = msg + ": " + parsed.ResponseStatus.Message
+		}
+		return "", fmt.Errorf("%w: MFA failed (%s)", ErrLoginFailed, msg)
+	}
+	return parsed.ServiceTicketID, nil
 }
 
-// OAuth1Token represents an OAuth1 token from the preauthorized endpoint
-type OAuth1Token struct {
-	Token    string
-	Secret   string
-	MFAToken string
-}
-
-// OAuth2Token represents an OAuth2 token from the exchange endpoint
+// OAuth2Token represents a DI OAuth2 bearer token.
 type OAuth2Token struct {
 	AccessToken  string
 	RefreshToken string
 	Expiry       time.Time
 	Scope        string
 	TokenType    string
+	ClientID     string
 }
 
-// getOAuth1Token exchanges the SSO ticket for an OAuth1 token
-func (s *ssoClient) getOAuth1Token(ctx context.Context, ticket string, consumer *oauthConsumer) (*OAuth1Token, error) {
-	baseURL := fmt.Sprintf("https://connectapi.%s/oauth-service/oauth/", s.domain)
-	loginURL := fmt.Sprintf("https://sso.%s/sso/embed", s.domain)
-
-	tokenURL := fmt.Sprintf("%spreauthorized?ticket=%s&login-url=%s&accepts-mfa-tokens=true",
-		baseURL, url.QueryEscape(ticket), url.QueryEscape(loginURL))
-
-	// Create OAuth1 signer for this request (no token yet, just consumer credentials)
-	signer := &OAuth1Signer{
-		ConsumerKey:    consumer.Key,
-		ConsumerSecret: consumer.Secret,
+func (s *ssoClient) exchangeServiceTicket(ctx context.Context, ticket, serviceURL string) (*OAuth2Token, error) {
+	var lastErr error
+	for _, clientID := range diClientIDs {
+		token, err := s.postDIToken(ctx, url.Values{
+			"client_id":      {clientID},
+			"service_ticket": {ticket},
+			"grant_type":     {diGrantType},
+			"service_url":    {serviceURL},
+		}, clientID)
+		if err == nil {
+			return token, nil
+		}
+		lastErr = err
 	}
+	if lastErr == nil {
+		lastErr = errors.New("no DI client IDs configured")
+	}
+	return nil, lastErr
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tokenURL, http.NoBody)
+func (s *ssoClient) refreshDIToken(ctx context.Context, refreshToken, clientID string) (*OAuth2Token, error) {
+	return s.postDIToken(ctx, url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {clientID},
+		"refresh_token": {refreshToken},
+	}, clientID)
+}
+
+func (s *ssoClient) postDIToken(ctx context.Context, form url.Values, fallbackClientID string) (*OAuth2Token, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.diTokenURL(), strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "com.garmin.android.apps.connectmobile")
-	signer.Sign(req)
+	clientID := form.Get("client_id")
+	if clientID == "" {
+		clientID = fallbackClientID
+	}
+	applyNativeHeaders(req)
+	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(clientID+":")))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json,text/html;q=0.9,*/*;q=0.8")
+	req.Header.Set("Cache-Control", "no-cache")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("OAuth1 token request failed: %s - %s", resp.Status, string(body))
-	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-
-	// Parse OAuth1 token from response (URL-encoded format)
-	values, err := url.ParseQuery(string(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse OAuth1 response: %w", err)
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("DI token exchange rate limited (429)")
 	}
-
-	return &OAuth1Token{
-		Token:    values.Get("oauth_token"),
-		Secret:   values.Get("oauth_token_secret"),
-		MFAToken: values.Get("mfa_token"),
-	}, nil
-}
-
-// exchangeOAuth1ForOAuth2 exchanges an OAuth1 token for an OAuth2 token
-func (s *ssoClient) exchangeOAuth1ForOAuth2(ctx context.Context, oauth1 *OAuth1Token, consumer *oauthConsumer) (*OAuth2Token, error) {
-	baseURL := fmt.Sprintf("https://connectapi.%s/oauth-service/oauth/", s.domain)
-	exchangeURL := baseURL + "exchange/user/2.0"
-
-	// Create OAuth1 signer with both consumer and token credentials
-	signer := &OAuth1Signer{
-		ConsumerKey:    consumer.Key,
-		ConsumerSecret: consumer.Secret,
-		Token:          oauth1.Token,
-		TokenSecret:    oauth1.Secret,
-	}
-
-	// Build request body
-	var body io.Reader
-	if oauth1.MFAToken != "" {
-		formData := url.Values{"mfa_token": {oauth1.MFAToken}}
-		body = strings.NewReader(formData.Encode())
-	} else {
-		body = http.NoBody
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, exchangeURL, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("User-Agent", "com.garmin.android.apps.connectmobile")
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	signer.Sign(req)
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("OAuth2 exchange failed: %s - %s", resp.Status, string(respBody))
+		return nil, fmt.Errorf("DI token exchange failed for %s: %s - %s", clientID, resp.Status, truncate(string(body), 200))
 	}
 
-	// Parse JSON response
 	var tokenResp struct {
-		Scope                 string `json:"scope"`
-		JTI                   string `json:"jti"`
-		AccessToken           string `json:"access_token"`
-		TokenType             string `json:"token_type"`
-		RefreshToken          string `json:"refresh_token"`
-		ExpiresIn             int64  `json:"expires_in"`
-		RefreshTokenExpiresIn int64  `json:"refresh_token_expires_in"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		Scope        string `json:"scope"`
+		TokenType    string `json:"token_type"`
+	}
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return nil, fmt.Errorf("failed to parse DI token response: %w", err)
+	}
+	if tokenResp.AccessToken == "" {
+		return nil, errors.New("DI token response missing access_token")
 	}
 
-	if err := readJSON(resp, &tokenResp); err != nil {
-		return nil, fmt.Errorf("failed to parse OAuth2 response: %w", err)
+	expiry := time.Now().Add(time.Hour)
+	if tokenResp.ExpiresIn > 0 {
+		expiry = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	} else if exp, ok := jwtExpiry(tokenResp.AccessToken); ok {
+		expiry = exp
+	}
+
+	resolvedClientID := jwtClientID(tokenResp.AccessToken)
+	if resolvedClientID == "" {
+		resolvedClientID = clientID
 	}
 
 	return &OAuth2Token{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
-		Expiry:       time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
+		Expiry:       expiry,
 		Scope:        tokenResp.Scope,
 		TokenType:    tokenResp.TokenType,
+		ClientID:     resolvedClientID,
 	}, nil
 }
 
-// doGet performs a GET request and returns the response body as string
-func (s *ssoClient) doGet(ctx context.Context, reqURL, referer string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, http.NoBody)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("User-Agent", "com.garmin.android.apps.connectmobile")
-	if referer != "" {
-		req.Header.Set("Referer", referer)
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(body), nil
+func applyNativeHeaders(req *http.Request) {
+	req.Header.Set("User-Agent", nativeAPIUA)
+	req.Header.Set("X-Garmin-User-Agent", nativeXGarminUA)
+	req.Header.Set("X-Garmin-Paired-App-Version", "10861")
+	req.Header.Set("X-Garmin-Client-Platform", "Android")
+	req.Header.Set("X-App-Ver", "10861")
+	req.Header.Set("X-Lang", "en")
+	req.Header.Set("X-GCExperience", "GC5")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 }
 
-// doPost performs a POST request with form data and returns the response body
-func (s *ssoClient) doPost(ctx context.Context, reqURL, referer string, data url.Values) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		return "", err
+func jwtClientID(token string) string {
+	payload, ok := jwtPayload(token)
+	if !ok {
+		return ""
 	}
+	if v, ok := payload["client_id"].(string); ok {
+		return v
+	}
+	return ""
+}
 
-	req.Header.Set("User-Agent", "com.garmin.android.apps.connectmobile")
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if referer != "" {
-		req.Header.Set("Referer", referer)
+func jwtExpiry(token string) (time.Time, bool) {
+	payload, ok := jwtPayload(token)
+	if !ok {
+		return time.Time{}, false
 	}
+	switch v := payload["exp"].(type) {
+	case float64:
+		return time.Unix(int64(v), 0), true
+	case json.Number:
+		n, err := v.Int64()
+		if err != nil {
+			return time.Time{}, false
+		}
+		return time.Unix(n, 0), true
+	default:
+		return time.Time{}, false
+	}
+}
+
+func jwtPayload(token string) (map[string]any, bool) {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return nil, false
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		// Some tokens use padded encoding.
+		raw, err = base64.URLEncoding.DecodeString(parts[1])
+		if err != nil {
+			return nil, false
+		}
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, false
+	}
+	return payload, true
+}
+
+func (s *ssoClient) doSSOJSON(ctx context.Context, method, reqURL string, payload any) ([]byte, int, error) {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, 0, err
+	}
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, bytes.NewReader(raw))
+	if err != nil {
+		return nil, 0, err
+	}
+	req.Header.Set("User-Agent", iosLoginUA)
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", fmt.Sprintf("https://sso.%s", s.domain))
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, resp.StatusCode, err
 	}
+	return body, resp.StatusCode, nil
+}
 
-	return string(body), nil
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
 }
 
 // Login authenticates the client with email and password
 func (c *Client) Login(ctx context.Context, email, password string) error {
 	return c.ssoLogin(ctx, email, password)
-}
-
-// readJSON decodes the JSON body from an HTTP response
-func readJSON(resp *http.Response, v any) error {
-	return json.NewDecoder(resp.Body).Decode(v)
 }
