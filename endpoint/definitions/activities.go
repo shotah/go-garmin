@@ -43,7 +43,7 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLISubcommand: "list",
 		MCPTool:       "list_activities",
 		Short:         "List activities",
-		Long:          "List activities with pagination including distance, duration, heart rate, and other metrics",
+		Long:          "List activities with pagination. Climbing sessions include numFalls (watch falls), numClimbSends, numClimbsCompleted, and maxClimbGrade when present. Use get_activity_typed_splits for per-route grades/status.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -290,7 +290,7 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLISubcommand: "typed-splits",
 		MCPTool:       "get_activity_typed_splits",
 		Short:         "Get activity typed splits",
-		Long:          "Get typed splits data for an activity with detailed per-split metrics by type (walk, run, interval, etc.)",
+		Long:          "Get typed splits for an activity. For indoor climbing / bouldering this is the per-route list: type CLIMB_ACTIVE|CLIMB_REST, status CLIMB_COMPLETED|CLIMB_ATTEMPTED, and gradeValue (VERMIN/YDS/FONT). Session fall counts are on get_activity_split_summaries (numFalls).",
 		DependsOn:     "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
@@ -320,7 +320,7 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLISubcommand: "split-summaries",
 		MCPTool:       "get_activity_split_summaries",
 		Short:         "Get activity split summaries",
-		Long:          "Get split summaries for an activity aggregated by split type (warmup, active, recovery, cooldown, etc.)",
+		Long:          "Get split summaries aggregated by type. For climbing: CLIMB_ACTIVE includes numFalls (watch falls), numClimbSends, numClimbsCompleted, and maxGradeValue. Use get_activity_typed_splits for per-route grades/status.",
 		DependsOn:     "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)

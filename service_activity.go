@@ -36,19 +36,22 @@ type Privacy struct {
 
 // SplitSummary represents a split segment within an activity.
 type SplitSummary struct {
-	NoOfSplits           int     `json:"noOfSplits"`
-	TotalAscent          float64 `json:"totalAscent"`
-	Duration             float64 `json:"duration"`
-	SplitType            string  `json:"splitType"`
-	NumClimbSends        int     `json:"numClimbSends"`
-	MaxElevationGain     float64 `json:"maxElevationGain"`
-	AverageElevationGain float64 `json:"averageElevationGain"`
-	MaxDistance          int     `json:"maxDistance"`
-	Distance             float64 `json:"distance"`
-	AverageSpeed         float64 `json:"averageSpeed"`
-	MaxSpeed             float64 `json:"maxSpeed"`
-	NumFalls             int     `json:"numFalls"`
-	ElevationLoss        float64 `json:"elevationLoss"`
+	NoOfSplits           int              `json:"noOfSplits"`
+	TotalAscent          float64          `json:"totalAscent"`
+	Duration             float64          `json:"duration"`
+	SplitType            string           `json:"splitType"`
+	NumClimbSends        int              `json:"numClimbSends"`
+	MaxElevationGain     float64          `json:"maxElevationGain"`
+	AverageElevationGain float64          `json:"averageElevationGain"`
+	MaxDistance          int              `json:"maxDistance"`
+	Distance             float64          `json:"distance"`
+	AverageSpeed         float64          `json:"averageSpeed"`
+	MaxSpeed             float64          `json:"maxSpeed"`
+	NumFalls             int              `json:"numFalls"`
+	ElevationLoss        float64          `json:"elevationLoss"`
+	NumClimbsCompleted   int              `json:"numClimbsCompleted,omitempty"`
+	Mode                 string           `json:"mode,omitempty"`
+	MaxGradeValue        *ClimbGradeValue `json:"maxGradeValue,omitempty"`
 
 	// Additional fields from detailed response
 	MovingDuration           *float64 `json:"movingDuration,omitempty"`
@@ -264,11 +267,15 @@ type ActivityListItem struct {
 	AverageHR     float64 `json:"averageHR,omitempty"`
 	ElevationGain float64 `json:"elevationGain,omitempty"`
 	LocationName  string  `json:"locationName,omitempty"`
+	NumFalls      int     `json:"numFalls,omitempty"`
+	NumClimbSends int     `json:"numClimbSends,omitempty"`
+	NumClimbsDone int     `json:"numClimbsCompleted,omitempty"`
+	MaxClimbGrade string  `json:"maxClimbGrade,omitempty"`
 }
 
 // ToListItem converts an Activity to a reduced ActivityListItem.
 func (a *Activity) ToListItem() ActivityListItem {
-	return ActivityListItem{
+	item := ActivityListItem{
 		ActivityID:    a.ActivityID,
 		ActivityName:  a.ActivityName,
 		StartTime:     a.StartTimeLocal,
@@ -280,6 +287,19 @@ func (a *Activity) ToListItem() ActivityListItem {
 		ElevationGain: a.ElevationGain,
 		LocationName:  a.LocationName,
 	}
+	for _, s := range a.SplitSummaries {
+		if s.SplitType != "CLIMB_ACTIVE" {
+			continue
+		}
+		item.NumFalls = s.NumFalls
+		item.NumClimbSends = s.NumClimbSends
+		item.NumClimbsDone = s.NumClimbsCompleted
+		if s.MaxGradeValue != nil {
+			item.MaxClimbGrade = s.MaxGradeValue.Display()
+		}
+		break
+	}
+	return item
 }
 
 // StartTime returns the activity start time parsed from StartTimeGMT.
@@ -1128,6 +1148,11 @@ type TypedSplit struct {
 	Type                        string  `json:"type"`
 	MessageIndex                int     `json:"messageIndex"`
 	LapIndexes                  []int   `json:"lapIndexes,omitempty"`
+	// Climbing / bouldering (indoor_climbing, bouldering). Watch "falls" for a
+	// session usually come from split_summaries.numFalls; per-route outcomes
+	// use Status (CLIMB_COMPLETED vs CLIMB_ATTEMPTED).
+	Status     string           `json:"status,omitempty"`
+	GradeValue *ClimbGradeValue `json:"gradeValue,omitempty"`
 }
 
 // DurationTime returns the split duration as a time.Duration.
@@ -1167,38 +1192,43 @@ func (s *ActivityService) GetTypedSplits(ctx context.Context, activityID int64) 
 
 // SplitSummaryDetail represents a summary of splits by type within an activity.
 type SplitSummaryDetail struct {
-	Distance              float64 `json:"distance"`
-	Duration              float64 `json:"duration"`
-	MovingDuration        float64 `json:"movingDuration"`
-	ElevationGain         float64 `json:"elevationGain"`
-	ElevationLoss         float64 `json:"elevationLoss"`
-	AverageSpeed          float64 `json:"averageSpeed"`
-	AverageMovingSpeed    float64 `json:"averageMovingSpeed"`
-	MaxSpeed              float64 `json:"maxSpeed"`
-	Calories              float64 `json:"calories"`
-	BMRCalories           float64 `json:"bmrCalories"`
-	AverageHR             float64 `json:"averageHR"`
-	MaxHR                 float64 `json:"maxHR"`
-	AverageRunCadence     float64 `json:"averageRunCadence"`
-	MaxRunCadence         float64 `json:"maxRunCadence"`
-	AveragePower          float64 `json:"averagePower"`
-	MaxPower              float64 `json:"maxPower"`
-	NormalizedPower       float64 `json:"normalizedPower,omitempty"`
-	GroundContactTime     float64 `json:"groundContactTime,omitempty"`
-	StrideLength          float64 `json:"strideLength"`
-	VerticalOscillation   float64 `json:"verticalOscillation"`
-	VerticalRatio         float64 `json:"verticalRatio"`
-	TotalExerciseReps     int     `json:"totalExerciseReps"`
-	AvgVerticalSpeed      float64 `json:"avgVerticalSpeed"`
-	AvgGradeAdjustedSpeed float64 `json:"avgGradeAdjustedSpeed"`
-	SplitType             string  `json:"splitType"`
-	NoOfSplits            int     `json:"noOfSplits"`
-	MaxElevationGain      float64 `json:"maxElevationGain"`
-	AverageElevationGain  float64 `json:"averageElevationGain"`
-	MaxDistance           int     `json:"maxDistance"`
-	MaxDistanceWithPrec   float64 `json:"maxDistanceWithPrecision"`
-	AvgStepFrequency      float64 `json:"avgStepFrequency"`
-	AvgStepLength         float64 `json:"avgStepLength"`
+	Distance              float64          `json:"distance"`
+	Duration              float64          `json:"duration"`
+	MovingDuration        float64          `json:"movingDuration"`
+	ElevationGain         float64          `json:"elevationGain"`
+	ElevationLoss         float64          `json:"elevationLoss"`
+	AverageSpeed          float64          `json:"averageSpeed"`
+	AverageMovingSpeed    float64          `json:"averageMovingSpeed"`
+	MaxSpeed              float64          `json:"maxSpeed"`
+	Calories              float64          `json:"calories"`
+	BMRCalories           float64          `json:"bmrCalories"`
+	AverageHR             float64          `json:"averageHR"`
+	MaxHR                 float64          `json:"maxHR"`
+	AverageRunCadence     float64          `json:"averageRunCadence"`
+	MaxRunCadence         float64          `json:"maxRunCadence"`
+	AveragePower          float64          `json:"averagePower"`
+	MaxPower              float64          `json:"maxPower"`
+	NormalizedPower       float64          `json:"normalizedPower,omitempty"`
+	GroundContactTime     float64          `json:"groundContactTime,omitempty"`
+	StrideLength          float64          `json:"strideLength"`
+	VerticalOscillation   float64          `json:"verticalOscillation"`
+	VerticalRatio         float64          `json:"verticalRatio"`
+	TotalExerciseReps     int              `json:"totalExerciseReps"`
+	AvgVerticalSpeed      float64          `json:"avgVerticalSpeed"`
+	AvgGradeAdjustedSpeed float64          `json:"avgGradeAdjustedSpeed"`
+	SplitType             string           `json:"splitType"`
+	NoOfSplits            int              `json:"noOfSplits"`
+	NumFalls              int              `json:"numFalls,omitempty"`
+	NumClimbSends         int              `json:"numClimbSends,omitempty"`
+	NumClimbsCompleted    int              `json:"numClimbsCompleted,omitempty"`
+	Mode                  string           `json:"mode,omitempty"`
+	MaxGradeValue         *ClimbGradeValue `json:"maxGradeValue,omitempty"`
+	MaxElevationGain      float64          `json:"maxElevationGain"`
+	AverageElevationGain  float64          `json:"averageElevationGain"`
+	MaxDistance           int              `json:"maxDistance"`
+	MaxDistanceWithPrec   float64          `json:"maxDistanceWithPrecision"`
+	AvgStepFrequency      float64          `json:"avgStepFrequency"`
+	AvgStepLength         float64          `json:"avgStepLength"`
 }
 
 // DurationTime returns the split summary duration as a time.Duration.
