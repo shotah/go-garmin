@@ -73,9 +73,10 @@ var CourseEndpoints = []endpoint.Endpoint{
 		},
 	},
 	{
-		Name:       "DownloadCourseGPX",
-		Service:    "Courses",
-		Cassette:   "courses_download",
+		Name:    "DownloadCourseGPX",
+		Service: "Courses",
+		// Binary/GPS payload — cassette is gitignored (courses_download.yaml); not validated in CI.
+		Cassette:   "none",
 		Path:       "/course-service/course/gpx/{course_id}",
 		HTTPMethod: "GET",
 		RawOutput:  true,
