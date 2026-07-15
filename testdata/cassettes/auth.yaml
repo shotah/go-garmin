@@ -145,7 +145,7 @@ interactions:
             X-Robots-Tag:
                 - noindex
             X-Vcap-Request-Id:
-                - 57603c03-f73e-4dd8-5424-84d4814d5f8c
+                - '[REDACTED]'
         status: 200 OK
         code: 200
         duration: 505.923716ms
@@ -223,7 +223,7 @@ interactions:
             X-Robots-Tag:
                 - noindex
             X-Vcap-Request-Id:
-                - e318ac96-a586-44dc-68ad-4ef00786ef4c
+                - '[REDACTED]'
         status: 200 OK
         code: 200
         duration: 437.459636ms
@@ -482,7 +482,7 @@ interactions:
             X-Robots-Tag:
                 - noindex
             X-Vcap-Request-Id:
-                - 31d3a749-ebb6-4061-55ed-cca697052266
+                - '[REDACTED]'
         status: 200 OK
         code: 200
         duration: 1.248672496s
@@ -605,7 +605,7 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"scope":"OMT_DISCOUNTS_READ GARMINPAY_WRITE ATP_READ GHS_SAMD INSIGHTS_READ OMT_DISCOUNTS_CREATE CIQ_APPSTORE_SERVICES_CREATE COMMUNITY_COURSE_WRITE GCOFFER_WRITE DT_CLIENT_ANALYTICS_WRITE CIQ_APPSTORE_SERVICES_DELETE OMT_SUBSCRIPTION_READ CONNECT_READ GARMIN_PROFILE_READ COMMUNITY_COURSE_READ GOLF_API_READ GHS_UPLOAD DIVE_API_READ CIQ_APPSTORE_SERVICES_READ CIQ_APPSTORE_SERVICES_UPDATE CONNECT_WRITE CONNECT_MCT_DAILY_LOG_READ DI_OAUTH_2_AUTHORIZATION_CODE_CREATE GARMINPAY_READ GOLF_API_WRITE INSIGHTS_WRITE PRODUCT_SEARCH_READ OMT_CAMPAIGN_READ GCOFFER_READ ATP_WRITE","jti":"1c764a1f-ddf4-4728-ab26-04e27c113a40","access_token":"[REDACTED]","token_type":"bearer","refresh_token":"[REDACTED]","expires_in":105693,"refresh_token_expires_in":2591999}'
+        body: '{"scope":"OMT_DISCOUNTS_READ GARMINPAY_WRITE ATP_READ GHS_SAMD INSIGHTS_READ OMT_DISCOUNTS_CREATE CIQ_APPSTORE_SERVICES_CREATE COMMUNITY_COURSE_WRITE GCOFFER_WRITE DT_CLIENT_ANALYTICS_WRITE CIQ_APPSTORE_SERVICES_DELETE OMT_SUBSCRIPTION_READ CONNECT_READ GARMIN_PROFILE_READ COMMUNITY_COURSE_READ GOLF_API_READ GHS_UPLOAD DIVE_API_READ CIQ_APPSTORE_SERVICES_READ CIQ_APPSTORE_SERVICES_UPDATE CONNECT_WRITE CONNECT_MCT_DAILY_LOG_READ DI_OAUTH_2_AUTHORIZATION_CODE_CREATE GARMINPAY_READ GOLF_API_WRITE INSIGHTS_WRITE PRODUCT_SEARCH_READ OMT_CAMPAIGN_READ GCOFFER_READ ATP_WRITE","jti":"00000000-0000-0000-0000-000000000000","access_token":"[REDACTED]","token_type":"bearer","refresh_token":"[REDACTED]","expires_in":105693,"refresh_token_expires_in":2591999}'
         headers:
             Alt-Svc:
                 - h3=":443"; ma=86400

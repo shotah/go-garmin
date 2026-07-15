@@ -1,53 +1,164 @@
-.PHONY: fmt lint test coverage check build cli record-fixtures validate-endpoints install-hooks
+# go-garmin Makefile — Go training wheels for the Python-brained
+#
+# Run `make` or `make help` to see everything.
+# Tip: Go already has great CLI ergonomics; these targets just wrap the common ones.
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+.DEFAULT_GOAL := help
+
+.PHONY: help fmt vet lint test test-race test-short coverage check \
+	build cli install tidy deps clean record-fixtures record fixtures auth \
+	validate-endpoints install-hooks tools run
+
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X main.version=$(VERSION)
 
-# Format all Go files (tools provided by nix devShell)
-fmt:
+# Optional: `make test PKG=./endpoint/...` or `make coverage PKG=./...`
+PKG ?= ./...
+
+##@ Getting oriented
+
+help: ## Show this help
+	@echo.
+	@echo Usage:  make ^<target^>
+	@echo.
+	@echo Getting oriented
+	@echo   help                   Show this help
+	@echo.
+	@echo Daily loop (format -^> lint -^> test)
+	@echo   fmt                    Format imports/code (goimports-reviser)
+	@echo   vet                    Static analysis (go vet)
+	@echo   lint                   Full lint suite (golangci-lint)
+	@echo   test                   Run all tests (PKG=./path/... for one package)
+	@echo   test-short             Skip long/integration-style tests (-short)
+	@echo   test-race              Run tests with the race detector
+	@echo   coverage               Library coverage report (excludes cmd/)
+	@echo   check                  Autofix, lint, validate endpoints, and test
+	@echo.
+	@echo Build ^& run
+	@echo   build                  Compile all packages (sanity check)
+	@echo   cli                    Build the garmin CLI binary into ./bin/garmin
+	@echo   install                Install garmin into GOPATH/bin
+	@echo   run                    go run CLI  (make run ARGS="--help")
+	@echo.
+	@echo Modules ^& cleanup
+	@echo   tidy                   Sync go.mod / go.sum with imports
+	@echo   deps                   Download module deps
+	@echo   clean                  Remove binaries and coverage artifacts
+	@echo.
+	@echo Project-specific
+	@echo   validate-endpoints     Check endpoint definitions are complete
+	@echo   auth                   Interactive Garmin login -^> settings.json
+	@echo   fixtures               Record/update all VCR cassettes
+	@echo   record                 Alias for fixtures
+	@echo   record-fixtures        Build VCR fixture recorder into ./bin/
+	@echo   install-hooks          Install git pre-commit (autofix + lint + test)
+	@echo.
+	@echo Tooling
+	@echo   tools                  Install goimports-reviser + golangci-lint v2
+	@echo.
+
+##@ Daily loop (format → lint → test)
+
+fmt: ## Autofix imports/code (goimports-reviser + golangci-lint fmt/fix)
 	goimports-reviser -format -recursive .
+	-golangci-lint fmt ./...
+	-golangci-lint run --fix ./...
 
-# Lint
-lint:
-	golangci-lint run
+vet: ## Static analysis (go vet) — catches bugs gofmt won't
+	go vet ./...
 
-# Run tests (use PKG=./path/to/package to test specific package)
-test:
-ifdef PKG
-	go test -v $(PKG)
-else
-	go test ./...
-endif
+lint: ## Full lint suite (golangci-lint; no write)
+	golangci-lint run ./...
 
-# Run tests with coverage (use PKG=./path/to/package for specific package)
-coverage:
-ifdef PKG
-	go test -cover -coverprofile=coverage.out $(PKG)
-else
-	go test -cover -coverprofile=coverage.out ./...
-endif
-	go tool cover -func=coverage.out
+test: ## Run all tests (PKG=./path/... for one package)
+	go test $(PKG)
 
-# Format, lint, and test
-check: fmt lint test
+test-short: ## Skip long/integration-style tests (-short)
+	go test -short $(PKG)
 
-# Build (verify compilation)
-build:
+test-race: ## Run tests with the race detector (slower, worth it)
+	go test -race $(PKG)
+
+# Default coverage scope excludes cmd/ (CLI mains drag totals down).
+# Override: make coverage PKG=./...
+COVERAGE_PKG ?= ./garmin/... ./endpoint/... ./exercises/... ./testutil/...
+
+coverage: ## Tests + coverage report for library packages (writes coverage.out)
+	go test -cover "-coverprofile=coverage.out" $(COVERAGE_PKG)
+	go tool cover "-func=coverage.out"
+
+check: fmt lint validate-endpoints test ## Autofix, lint, validate, test (matches pre-commit)
+
+##@ Build & run
+
+build: ## Compile all packages (sanity check; no binary kept)
 	go build ./...
 
-# Build CLI binary
-cli:
-	go build -ldflags "$(LDFLAGS)" -o garmin ./cmd/garmin
+cli: ## Build the garmin CLI binary into ./bin/garmin
+	mkdir -p bin
+	go build -ldflags "$(LDFLAGS)" -o bin/garmin ./cmd/garmin
 
-# Build record-fixtures tool
-record-fixtures:
-	go build -o record-fixtures ./cmd/record-fixtures
+install: ## Install garmin into $$GOPATH/bin (or $$GOBIN)
+	go install -ldflags "$(LDFLAGS)" ./cmd/garmin
 
-# Validate endpoint definitions
-validate-endpoints:
+run: ## Build & run CLI — e.g. make run ARGS="sleep --help"
+	go run ./cmd/garmin $(ARGS)
+
+##@ Modules & cleanup
+
+tidy: ## Sync go.mod / go.sum with imports (python: pip freeze vibes)
+	go mod tidy
+
+deps: ## Download module deps into the module cache
+	go mod download
+
+clean: ## Remove built binaries and coverage artifacts
+	go clean ./...
+ifeq ($(OS),Windows_NT)
+	-cmd /C "rmdir /S /Q bin 2>NUL & del /Q garmin.exe record-fixtures record-fixtures.exe coverage coverage.out coverage.txt validate-endpoints validate-endpoints.exe har-parser har-parser.exe 2>NUL"
+else
+	rm -rf bin
+	rm -f garmin.exe record-fixtures record-fixtures.exe coverage coverage.out coverage.txt validate-endpoints validate-endpoints.exe har-parser har-parser.exe
+endif
+
+##@ Project-specific
+
+validate-endpoints: ## Check endpoint definitions are complete
 	go run ./cmd/validate-endpoints
 
-# Install git hooks
-install-hooks:
+record-fixtures: ## Build VCR fixture recorder → ./bin/record-fixtures
+	mkdir -p bin
+	go build -o bin/record-fixtures ./cmd/record-fixtures
+	@echo ""
+	@echo "Workflow:  make auth  &&  make fixtures"
+	@echo "See TESTING.md for details."
+
+# Interactive login (email/password/MFA) → settings.json at module root.
+auth: ## Interactive Garmin auth → settings.json
+	go run ./cmd/garmin-auth
+
+# Requires settings.json from `make auth`.
+# Examples:
+#   make fixtures
+#   make fixtures CASSETTE=usersummary
+#   make fixtures DATE=2026-07-14
+fixtures: ## Record/update VCR cassettes (uses settings.json)
+	go run ./cmd/record-fixtures $(if $(CASSETTE),-cassette=$(CASSETTE),) $(if $(DATE),-date=$(DATE),)
+
+record: fixtures ## Alias for fixtures
+
+install-hooks: ## Install git pre-commit hook (autofix + lint + test)
+ifeq ($(OS),Windows_NT)
+	copy /Y scripts\pre-commit .git\hooks\pre-commit
+else
 	cp scripts/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
+endif
+	@echo "Installed .git/hooks/pre-commit"
+
+##@ Tooling (skip if you use nix develop / direnv)
+
+tools: ## Install goimports-reviser + golangci-lint v2 into $$GOBIN
+	go install github.com/incu6us/goimports-reviser/v3@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+	@echo Installed tools. Ensure GOPATH/bin is on PATH, then: golangci-lint version

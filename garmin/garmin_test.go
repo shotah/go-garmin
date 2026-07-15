@@ -2,7 +2,10 @@ package garmin
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"testing"
+	"time"
 )
 
 func TestClientCreation(t *testing.T) {
@@ -39,6 +42,69 @@ func TestClientSessionPersistence(t *testing.T) {
 
 	if client2.auth.OAuth1Token != "test-token" {
 		t.Errorf("token mismatch: got %s", client2.auth.OAuth1Token)
+	}
+}
+
+func TestCommitOAuth2PersistsSession(t *testing.T) {
+	var buf bytes.Buffer
+	var calls int
+	client := New(Options{})
+	client.auth = &authState{
+		OAuth2AccessToken:  "old-access",
+		OAuth2RefreshToken: "old-refresh",
+		DIClientID:         "old-client",
+		Domain:             "garmin.com",
+	}
+	client.SetSessionPersister(func(c *Client) error {
+		calls++
+		buf.Reset()
+		return c.SaveSession(&buf)
+	})
+
+	expiry := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
+	if err := client.commitOAuth2(&OAuth2Token{
+		AccessToken:  "new-access",
+		RefreshToken: "new-refresh",
+		Expiry:       expiry,
+		Scope:        "CONNECT_READ",
+		ClientID:     "new-client",
+	}); err != nil {
+		t.Fatalf("commitOAuth2: %v", err)
+	}
+
+	if calls != 1 {
+		t.Fatalf("expected persister called once, got %d", calls)
+	}
+	if client.auth.OAuth2AccessToken != "new-access" {
+		t.Fatalf("access token not updated: %s", client.auth.OAuth2AccessToken)
+	}
+	if client.auth.OAuth2RefreshToken != "new-refresh" {
+		t.Fatalf("refresh token not updated: %s", client.auth.OAuth2RefreshToken)
+	}
+	if client.auth.DIClientID != "new-client" {
+		t.Fatalf("client id not updated: %s", client.auth.DIClientID)
+	}
+
+	loaded := New(Options{})
+	if err := loaded.LoadSession(&buf); err != nil {
+		t.Fatalf("LoadSession: %v", err)
+	}
+	if loaded.auth.OAuth2AccessToken != "new-access" || loaded.auth.OAuth2RefreshToken != "new-refresh" {
+		t.Fatalf("persisted session mismatch: %+v", loaded.auth)
+	}
+}
+
+func TestCommitOAuth2PersistError(t *testing.T) {
+	client := New(Options{})
+	client.SetSessionPersister(func(*Client) error {
+		return io.EOF
+	})
+	err := client.commitOAuth2(&OAuth2Token{AccessToken: "a", RefreshToken: "r"})
+	if err == nil {
+		t.Fatal("expected persist error")
+	}
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("expected wrapped io.EOF, got %v", err)
 	}
 }
 
@@ -94,6 +160,7 @@ func TestAllServicesInitialized(t *testing.T) {
 		{"PersonalRecords", client.PersonalRecords},
 		{"Steps", client.Steps},
 		{"UserProfile", client.UserProfile},
+		{"UserSummary", client.UserSummary},
 	}
 
 	for _, s := range services {

@@ -4,6 +4,7 @@ package garmin
 import (
 	"encoding/json"
 	"testing"
+	"time"
 )
 
 const testDateMetrics = "2026-01-27"
@@ -361,5 +362,41 @@ func TestTrainingReadinessRawJSON(t *testing.T) {
 
 	if string(tr.RawJSON()) != rawJSON {
 		t.Error("RawJSON should return original JSON")
+	}
+}
+
+func TestRacePredictionsJSONUnmarshalAndDurations(t *testing.T) {
+	rawJSON := `{
+		"userId": 12345678,
+		"calendarDate": "2026-01-15",
+		"time5K": 1492,
+		"time10K": 3120,
+		"timeHalfMarathon": 6900,
+		"timeMarathon": 14400
+	}`
+
+	var rp RacePredictions
+	if err := json.Unmarshal([]byte(rawJSON), &rp); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	rp.SetRaw(json.RawMessage(rawJSON))
+
+	if rp.CalendarDate != "2026-01-15" {
+		t.Errorf("CalendarDate = %s", rp.CalendarDate)
+	}
+	if rp.Time5KDuration() != 1492*time.Second {
+		t.Errorf("Time5KDuration = %v", rp.Time5KDuration())
+	}
+	if rp.Time10KDuration() != 3120*time.Second {
+		t.Errorf("Time10KDuration = %v", rp.Time10KDuration())
+	}
+	if rp.TimeHalfMarathonDuration() != 6900*time.Second {
+		t.Errorf("TimeHalfMarathonDuration = %v", rp.TimeHalfMarathonDuration())
+	}
+	if rp.TimeMarathonDuration() != 14400*time.Second {
+		t.Errorf("TimeMarathonDuration = %v", rp.TimeMarathonDuration())
+	}
+	if string(rp.RawJSON()) != rawJSON {
+		t.Error("RawJSON mismatch")
 	}
 }

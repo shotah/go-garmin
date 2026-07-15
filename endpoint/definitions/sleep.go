@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	garmin "github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	garmin "github.com/shotah/go-garmin/garmin"
 )
 
 // SleepEndpoints defines all sleep-related API endpoints.

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/llehouerou/go-garmin/endpoint"
-	"github.com/llehouerou/go-garmin/endpoint/definitions"
-	"github.com/llehouerou/go-garmin/testutil"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint/definitions"
+	"github.com/shotah/go-garmin/testutil"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	definitions.RegisterAll(registry)
 
 	validator := endpoint.NewValidator(registry, endpoint.ValidatorConfig{
-		CassetteDir:           testutil.CassetteDir,
+		CassetteDir:           testutil.CassetteDir(),
 		SkipOrphanedCassettes: *skipOrphans,
 	})
 

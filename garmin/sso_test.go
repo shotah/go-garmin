@@ -1,9 +1,12 @@
 package garmin
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestExtractCSRF(t *testing.T) {
@@ -179,7 +182,7 @@ func TestOAuth1Signer_EncodeParams(t *testing.T) {
 
 func TestOAuth1Signer_GenerateSignature(t *testing.T) {
 	// Test case from OAuth 1.0 spec examples
-	signer := &OAuth1Signer{
+	signer := &OAuth1Signer{ //nolint:gosec // RFC 5849 example credentials
 		ConsumerKey:    "dpf43f3p2l4k3l03",
 		ConsumerSecret: "kd94hf93k423kf44",
 		Token:          "nnch734d00sl2jdk",
@@ -285,6 +288,52 @@ func TestGenerateNonce(t *testing.T) {
 
 	if nonce1 == nonce2 {
 		t.Error("generateNonce() returned same value twice")
+	}
+}
+
+func TestJWTHelpers(t *testing.T) {
+	payload := map[string]any{
+		"client_id": "garmin-client",
+		"exp":       float64(time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC).Unix()),
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := "hdr." + base64.RawURLEncoding.EncodeToString(raw) + ".sig"
+
+	gotPayload, ok := jwtPayload(token)
+	if !ok {
+		t.Fatal("jwtPayload failed")
+	}
+	if gotPayload["client_id"] != "garmin-client" {
+		t.Errorf("client_id = %v", gotPayload["client_id"])
+	}
+	if jwtClientID(token) != "garmin-client" {
+		t.Errorf("jwtClientID = %q", jwtClientID(token))
+	}
+	exp, ok := jwtExpiry(token)
+	if !ok || !exp.Equal(time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("jwtExpiry = %v ok=%v", exp, ok)
+	}
+
+	if _, ok := jwtPayload("not-a-jwt"); ok {
+		t.Error("jwtPayload should fail for invalid token")
+	}
+	if jwtClientID("x.y") != "" {
+		t.Error("jwtClientID should be empty for invalid payload")
+	}
+	if _, ok := jwtExpiry("x." + base64.RawURLEncoding.EncodeToString([]byte(`{"exp":"bad"}`))); ok {
+		t.Error("jwtExpiry should fail for non-numeric exp")
+	}
+}
+
+func TestTruncate(t *testing.T) {
+	if got := truncate("hi", 5); got != "hi" {
+		t.Errorf("truncate short = %q", got)
+	}
+	if got := truncate("abcdef", 3); got != "abc…" {
+		t.Errorf("truncate long = %q", got)
 	}
 }
 

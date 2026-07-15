@@ -80,6 +80,18 @@ func TestHandlerArgs_Bool(t *testing.T) {
 	}
 }
 
+func TestHandlerArgs_HasParam(t *testing.T) {
+	args := &HandlerArgs{
+		Params: map[string]any{"limit": 10, "enabled": false},
+	}
+	if !args.HasParam("limit") || !args.HasParam("enabled") {
+		t.Error("HasParam should be true for present keys")
+	}
+	if args.HasParam("missing") {
+		t.Error("HasParam should be false for missing keys")
+	}
+}
+
 func TestRegistry_Register(t *testing.T) {
 	r := NewRegistry()
 

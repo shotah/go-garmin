@@ -4,7 +4,7 @@ package definitions
 import (
 	"testing"
 
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
 )
 
 func TestSleepEndpoints_Registered(t *testing.T) {

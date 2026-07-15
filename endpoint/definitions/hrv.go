@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 // HRVEndpoints defines all HRV-related endpoints.

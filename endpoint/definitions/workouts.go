@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 // workoutBodyConfig provides documentation for the workout JSON structure.

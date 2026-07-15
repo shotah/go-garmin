@@ -8,13 +8,16 @@ import (
 func TestClimbGradeValueDisplay(t *testing.T) {
 	tests := []struct {
 		name string
-		g    ClimbGradeValue
+		g    *ClimbGradeValue
 		want string
 	}{
-		{name: "vermin", g: ClimbGradeValue{Scale: "VERMIN", ValueKey: "V3"}, want: "V3"},
-		{name: "yds", g: ClimbGradeValue{Scale: "YDS", ValueKey: "_5_11D"}, want: "5.11d"},
-		{name: "font", g: ClimbGradeValue{Scale: "FONT", ValueKey: "_4"}, want: "Font 4"},
-		{name: "unknown", g: ClimbGradeValue{Scale: "OTHER", ValueKey: "X"}, want: "OTHER:X"},
+		{name: "vermin", g: &ClimbGradeValue{Scale: "VERMIN", ValueKey: "V3"}, want: "V3"},
+		{name: "yds", g: &ClimbGradeValue{Scale: "YDS", ValueKey: "_5_11D"}, want: "5.11d"},
+		{name: "font", g: &ClimbGradeValue{Scale: "FONT", ValueKey: "_4"}, want: "Font 4"},
+		{name: "unknown", g: &ClimbGradeValue{Scale: "OTHER", ValueKey: "X"}, want: "OTHER:X"},
+		{name: "empty scale", g: &ClimbGradeValue{ValueKey: "V2"}, want: "V2"},
+		{name: "empty value", g: &ClimbGradeValue{Scale: "VERMIN"}, want: ""},
+		{name: "nil", g: nil, want: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

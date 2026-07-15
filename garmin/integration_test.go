@@ -18,12 +18,12 @@ import (
 
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 
-	"github.com/llehouerou/go-garmin/testutil"
+	"github.com/shotah/go-garmin/testutil"
 )
 
 func skipIfNoCassette(t *testing.T, name string) {
 	t.Helper()
-	cassettePath := filepath.Join(testutil.CassetteDir, name+".yaml")
+	cassettePath := filepath.Join(testutil.CassetteDir(), name+".yaml")
 	if _, err := os.Stat(cassettePath); os.IsNotExist(err) {
 		t.Skipf("cassette %s not found, run record-fixtures first", name)
 	}

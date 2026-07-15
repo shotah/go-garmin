@@ -4,6 +4,7 @@ package garmin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -235,4 +236,182 @@ func (s *WellnessService) GetDailyRespiration(ctx context.Context, date time.Tim
 // GetDailyIntensityMinutes retrieves intensity minutes data for the specified date.
 func (s *WellnessService) GetDailyIntensityMinutes(ctx context.Context, date time.Time) (*DailyIntensityMinutes, error) {
 	return fetch[DailyIntensityMinutes](ctx, s.client, "/wellness-service/wellness/daily/im/"+date.Format("2006-01-02"))
+}
+
+// DailyEvents represents wellness daily events (including auto-detected activities).
+// The Connect payload varies; MarshalJSON preserves the original response body.
+type DailyEvents struct {
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (d *DailyEvents) RawJSON() json.RawMessage { return d.raw }
+
+// SetRaw sets the raw JSON response.
+func (d *DailyEvents) SetRaw(data json.RawMessage) { d.raw = data }
+
+// UnmarshalJSON stores the original payload.
+func (d *DailyEvents) UnmarshalJSON(data []byte) error {
+	d.raw = append(json.RawMessage(nil), data...)
+	return nil
+}
+
+// MarshalJSON returns the original payload when available.
+func (d DailyEvents) MarshalJSON() ([]byte, error) {
+	if len(d.raw) > 0 {
+		return d.raw, nil
+	}
+	return []byte("{}"), nil
+}
+
+// GetDailyEvents retrieves daily wellness events for the specified date.
+// Note: the live API uses ?calendarDate=, not a path segment.
+func (s *WellnessService) GetDailyEvents(ctx context.Context, date time.Time) (*DailyEvents, error) {
+	return fetch[DailyEvents](ctx, s.client, "/wellness-service/wellness/dailyEvents?calendarDate="+date.Format("2006-01-02"))
+}
+
+// GetDailySleep retrieves sleep data via the wellness-service path
+// (/wellness-service/wellness/dailySleepData/{displayName}). Prefer Sleep.GetDaily
+// for the primary sleep-service endpoint unless you need this alternate path.
+func (s *WellnessService) GetDailySleep(ctx context.Context, displayName string, date time.Time) (*DailySleep, error) {
+	path := fmt.Sprintf(
+		"/wellness-service/wellness/dailySleepData/%s?date=%s&nonSleepBufferMinutes=60",
+		displayName,
+		date.Format("2006-01-02"),
+	)
+	return fetch[DailySleep](ctx, s.client, path)
+}
+
+// DailySummaryChartInterval is one interval from the daily steps/activity chart.
+type DailySummaryChartInterval struct {
+	StartGMT             string `json:"startGMT"`
+	EndGMT               string `json:"endGMT"`
+	Steps                int    `json:"steps"`
+	Pushes               int    `json:"pushes"`
+	PrimaryActivityLevel string `json:"primaryActivityLevel"`
+}
+
+// DailySummaryChart is the intraday steps chart (15-minute intervals).
+type DailySummaryChart struct {
+	Intervals []DailySummaryChartInterval
+	raw       json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (d *DailySummaryChart) RawJSON() json.RawMessage { return d.raw }
+
+// SetRaw sets the raw JSON response.
+func (d *DailySummaryChart) SetRaw(data json.RawMessage) { d.raw = data }
+
+// UnmarshalJSON unmarshals the array response into Intervals.
+func (d *DailySummaryChart) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &d.Intervals)
+}
+
+// GetDailySummaryChart retrieves the daily steps/activity chart for a user.
+func (s *WellnessService) GetDailySummaryChart(ctx context.Context, displayName string, date time.Time) (*DailySummaryChart, error) {
+	path := fmt.Sprintf(
+		"/wellness-service/wellness/dailySummaryChart/%s?date=%s",
+		displayName,
+		date.Format("2006-01-02"),
+	)
+	return fetch[DailySummaryChart](ctx, s.client, path)
+}
+
+// FloorsValueDescriptor describes the format of floor chart values.
+type FloorsValueDescriptor struct {
+	Key   string `json:"key"`
+	Index int    `json:"index"`
+}
+
+// DailyFloors represents floors ascended/descended chart data for a day.
+type DailyFloors struct {
+	StartTimestampGMT         string                  `json:"startTimestampGMT"`
+	EndTimestampGMT           string                  `json:"endTimestampGMT"`
+	StartTimestampLocal       string                  `json:"startTimestampLocal"`
+	EndTimestampLocal         string                  `json:"endTimestampLocal"`
+	FloorsValueDescriptorList []FloorsValueDescriptor `json:"floorsValueDescriptorDTOList"`
+	FloorValuesArray          [][]any                 `json:"floorValuesArray"`
+
+	raw json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (d *DailyFloors) RawJSON() json.RawMessage { return d.raw }
+
+// SetRaw sets the raw JSON response.
+func (d *DailyFloors) SetRaw(data json.RawMessage) { d.raw = data }
+
+// GetDailyFloors retrieves floor climbing chart data for the specified date.
+func (s *WellnessService) GetDailyFloors(ctx context.Context, date time.Time) (*DailyFloors, error) {
+	return fetch[DailyFloors](ctx, s.client, "/wellness-service/wellness/floorsChartData/daily/"+date.Format("2006-01-02"))
+}
+
+// BodyBatteryReport is one day of body battery report data.
+type BodyBatteryReport struct {
+	Date                   string  `json:"date"`
+	Charged                int     `json:"charged"`
+	Drained                int     `json:"drained"`
+	BodyBatteryValuesArray [][]any `json:"bodyBatteryValuesArray"`
+}
+
+// BodyBatteryReports is a list of daily body battery reports.
+type BodyBatteryReports struct {
+	Reports []BodyBatteryReport
+	raw     json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (b *BodyBatteryReports) RawJSON() json.RawMessage { return b.raw }
+
+// SetRaw sets the raw JSON response.
+func (b *BodyBatteryReports) SetRaw(data json.RawMessage) { b.raw = data }
+
+// UnmarshalJSON unmarshals the array response into Reports.
+func (b *BodyBatteryReports) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &b.Reports)
+}
+
+// GetBodyBatteryReports retrieves body battery reports for a date range.
+func (s *WellnessService) GetBodyBatteryReports(ctx context.Context, start, end time.Time) (*BodyBatteryReports, error) {
+	path := fmt.Sprintf(
+		"/wellness-service/wellness/bodyBattery/reports/daily?startDate=%s&endDate=%s",
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return fetch[BodyBatteryReports](ctx, s.client, path)
+}
+
+// SleepScoreEntry is sleep score data for a single day.
+type SleepScoreEntry struct {
+	CalendarDate string `json:"calendarDate"`
+	Value        int    `json:"value"`
+	QualifierKey string `json:"qualifierKey"`
+}
+
+// SleepScoreStats is sleep score data over a date range.
+type SleepScoreStats struct {
+	Entries []SleepScoreEntry
+	raw     json.RawMessage
+}
+
+// RawJSON returns the original JSON response.
+func (s *SleepScoreStats) RawJSON() json.RawMessage { return s.raw }
+
+// SetRaw sets the raw JSON response.
+func (s *SleepScoreStats) SetRaw(data json.RawMessage) { s.raw = data }
+
+// UnmarshalJSON unmarshals the array response into Entries.
+func (s *SleepScoreStats) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &s.Entries)
+}
+
+// GetSleepScoreStats retrieves daily sleep scores for a date range.
+func (s *WellnessService) GetSleepScoreStats(ctx context.Context, start, end time.Time) (*SleepScoreStats, error) {
+	path := fmt.Sprintf(
+		"/wellness-service/stats/daily/sleep/score/%s/%s",
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return fetch[SleepScoreStats](ctx, s.client, path)
 }

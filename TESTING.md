@@ -7,112 +7,60 @@ This project uses VCR-style testing to record and replay API interactions.
 - **Unit tests**: Test data structures and helpers without API calls
 - **Integration tests**: Test real API interactions using recorded cassettes
 
-## Recording Fixtures
-
-To record new API interactions for testing:
+## Recording fixtures
 
 ```bash
-# Build the record-fixtures tool
-make record-fixtures
+# 1) Interactive login (email / password / MFA) → gitignored settings.json
+make auth
 
-# Record cassettes with your Garmin credentials
-./record-fixtures -email=your@email.com -password=yourpassword
+# 2) Record/update ALL cassettes using that session
+make fixtures
 
-# Optionally specify a date
-./record-fixtures -email=your@email.com -password=yourpassword -date=2026-01-27
+# Or one cassette / pin a date
+make fixtures CASSETTE=usersummary
+make fixtures DATE=2026-07-14
 ```
 
-This creates cassette files in `testdata/cassettes/`:
-- `auth.yaml` - Authentication flow (recorded once, reused for session)
-- `sleep_daily.yaml` - Sleep service endpoints
-- `wellness_stress.yaml` - Stress data endpoints
-- `wellness_body_battery.yaml` - Body battery endpoints
+```bash
+go run ./cmd/record-fixtures -list
+go run ./cmd/record-fixtures -cassette=activities
+```
 
-## Running Tests
+This creates/updates cassette files in `testdata/cassettes/`.
+
+## Running tests
 
 ```bash
-# Run all tests (integration tests skip if no cassettes)
 make test
-
-# Run with verbose output
 go test -v ./...
-
-# Run only integration tests
 go test -v -run Integration ./...
 ```
 
-## How It Works
+## Pre-commit
 
-1. **Recording**: The `record-fixtures` command authenticates once and records the auth flow to `auth.yaml`. It then reuses the session to record each API endpoint to separate cassettes.
-
-2. **Sanitization**: Sensitive data is automatically anonymized before saving:
-   - Headers: Authorization, Cookie, Set-Cookie are redacted
-   - URLs: OAuth tickets are redacted
-   - Bodies: Passwords are redacted
-   - Personal info: `userProfilePK`, names, emails are replaced with anonymous values
-
-3. **Replay**: Integration tests load a fake session (to satisfy the client's auth check) and replay the API cassettes without making real API calls.
-
-## Adding New Tests
-
-1. Add a new recording function in `cmd/record-fixtures/main.go`
-2. Call it from `recordFixtures()` with the session
-3. Add corresponding test in `integration_test.go`
-4. Re-run `record-fixtures` to generate the cassette
-
-Example:
-
-```go
-// In cmd/record-fixtures/main.go
-func recordNewEndpoint(ctx context.Context, session []byte, date time.Time) error {
-    rec, err := testutil.NewRecordingRecorder("new_endpoint")
-    if err != nil {
-        return err
-    }
-    defer func() { _ = stopRecorder(rec) }()
-
-    client, err := loadSession(rec, session)
-    if err != nil {
-        return err
-    }
-
-    fmt.Printf("  Getting new endpoint data for %s...\n", date.Format("2006-01-02"))
-    _, err = client.NewService.GetData(ctx, date)
-    if err != nil {
-        fmt.Printf("  Warning: %v\n", err)
-    }
-
-    return nil
-}
+```bash
+make tools           # goimports-reviser + golangci-lint v2
+make install-hooks   # .git/hooks/pre-commit
 ```
 
-```go
-// In integration_test.go
-func TestIntegration_NewService_GetData(t *testing.T) {
-    skipIfNoCassette(t, "new_endpoint")
+On each commit the hook runs autofix (`goimports-reviser`, `golangci-lint --fix`), lint, endpoint validation, and `go test ./...`, then re-stages files it fixed.
 
-    rec, err := testutil.NewRecorder("new_endpoint", recorder.ModeReplayOnly)
-    if err != nil {
-        t.Fatalf("failed to create recorder: %v", err)
-    }
-    defer func() { _ = rec.Stop() }()
+Local equivalent: `make check`.
 
-    client := newTestClient(t, rec)
-    ctx := context.Background()
-    date := time.Date(2026, 1, 27, 0, 0, 0, 0, time.UTC)
+## How it works
 
-    data, err := client.NewService.GetData(ctx, date)
-    if err != nil {
-        t.Fatalf("GetData failed: %v", err)
-    }
+1. **Recording**: `make auth` writes `settings.json`. `make fixtures` reuses that session and records each API cassette.
+2. **Sanitization**: Sensitive data is anonymized before saving (auth headers, tickets, names, IDs, profile URLs, etc.).
+3. **Replay**: Integration tests load a fake session and replay cassettes without live API calls.
 
-    // Add assertions...
-}
-```
+## Adding new tests
 
-## Security Notes
+1. Add a recorder in `cmd/record-fixtures/main.go` and register it in `getCassetteRecorders()`
+2. Add a corresponding test in `garmin/integration_test.go`
+3. Run `make fixtures CASSETTE=<name>`
 
-- Never commit real credentials
-- Cassettes are sanitized but review them before committing
-- Personal information (userProfilePK, names, emails) is automatically anonymized
-- The `testdata/cassettes/` directory can be committed as cassettes contain only anonymized data
+## Security notes
+
+- Never commit `settings.json` or real credentials
+- Cassettes are sanitized; still review them before committing
+- `testdata/cassettes/` is safe to commit when anonymized

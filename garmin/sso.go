@@ -1,9 +1,9 @@
 // sso.go - Garmin SSO authentication (mobile iOS + DI OAuth).
 //
 // Matches cyberjunky/python-garminconnect ≥0.3 after the March 2026 auth break:
-//   1. POST sso…/mobile/api/login (clientId=GCM_IOS_DARK)
-//   2. Optional POST …/mobile/api/mfa/verifyCode
-//   3. POST diauth…/di-oauth2-service/oauth/token (grant_type=service_ticket)
+//  1. POST sso…/mobile/api/login (clientId=GCM_IOS_DARK)
+//  2. Optional POST …/mobile/api/mfa/verifyCode
+//  3. POST diauth…/di-oauth2-service/oauth/token (grant_type=service_ticket)
 //
 // The legacy connectapi oauth-service OAuth1→OAuth2 exchange returns 401 for new logins.
 package garmin
@@ -20,6 +20,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -173,7 +174,7 @@ type mobileSSOResponse struct {
 
 // authenticate performs mobile SSO login and returns a CAS service ticket.
 func (s *ssoClient) authenticate(ctx context.Context, email, password string, mfaHandler func() (string, error)) (string, error) {
-	ssoBase := fmt.Sprintf("https://sso.%s", s.domain)
+	ssoBase := "https://sso." + s.domain
 	serviceURL := s.serviceURL()
 
 	loginParams := url.Values{
@@ -204,7 +205,7 @@ func (s *ssoClient) authenticate(ctx context.Context, email, password string, mf
 	if err := json.Unmarshal(respJSON, &parsed); err != nil {
 		return "", fmt.Errorf("failed to parse mobile login response (HTTP %d): %w", status, err)
 	}
-	if parsed.Error != nil && parsed.Error.StatusCode == "429" {
+	if parsed.Error != nil && parsed.Error.StatusCode == strconv.Itoa(http.StatusTooManyRequests) {
 		return "", fmt.Errorf("%w: mobile login rate limited (429)", ErrLoginFailed)
 	}
 
@@ -251,7 +252,7 @@ func (s *ssoClient) handleMobileMFA(
 		return "", fmt.Errorf("MFA handler failed: %w", err)
 	}
 
-	ssoBase := fmt.Sprintf("https://sso.%s", s.domain)
+	ssoBase := "https://sso." + s.domain
 	mfaURL := ssoBase + "/mobile/api/mfa/verifyCode?" + loginParams.Encode()
 	body := map[string]any{
 		"mfaMethod":           mfaMethod,
@@ -345,7 +346,7 @@ func (s *ssoClient) postDIToken(ctx context.Context, form url.Values, fallbackCl
 		return nil, err
 	}
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, fmt.Errorf("DI token exchange rate limited (429)")
+		return nil, errors.New("DI token exchange rate limited (429)")
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("DI token exchange failed for %s: %s - %s", clientID, resp.Status, truncate(string(body), 200))
@@ -448,7 +449,7 @@ func jwtPayload(token string) (map[string]any, bool) {
 	return payload, true
 }
 
-func (s *ssoClient) doSSOJSON(ctx context.Context, method, reqURL string, payload any) ([]byte, int, error) {
+func (s *ssoClient) doSSOJSON(ctx context.Context, method, reqURL string, payload any) ([]byte, int, error) { //nolint:gocritic // unnamed status int is conventional
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, 0, err
@@ -460,7 +461,7 @@ func (s *ssoClient) doSSOJSON(ctx context.Context, method, reqURL string, payloa
 	req.Header.Set("User-Agent", iosLoginUA)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Origin", fmt.Sprintf("https://sso.%s", s.domain))
+	req.Header.Set("Origin", "https://sso."+s.domain)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {

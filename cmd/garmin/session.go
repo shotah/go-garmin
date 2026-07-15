@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/llehouerou/go-garmin"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 func sessionPath() string {
@@ -29,6 +29,9 @@ func loadClient() (*garmin.Client, error) {
 	if err := client.LoadSession(f); err != nil {
 		return nil, fmt.Errorf("session corrupted: %w", err)
 	}
+	// Persist rotated access/refresh tokens after automatic OAuth2 refresh so
+	// MCP/CLI restarts keep working without an interactive re-login.
+	client.SetSessionPersister(saveClient)
 	return client, nil
 }
 

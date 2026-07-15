@@ -4,7 +4,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
 )
 
 var mcpCmd = &cobra.Command{

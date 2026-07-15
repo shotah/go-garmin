@@ -6,12 +6,34 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 // FitnessAgeEndpoints defines all fitness age-related endpoints.
 var FitnessAgeEndpoints = []endpoint.Endpoint{
+	{
+		Name:       "GetFitnessAgeDaily",
+		Service:    "FitnessAge",
+		Cassette:   "fitnessage",
+		Path:       "/fitnessage-service/fitnessage/{date}",
+		HTTPMethod: "GET",
+		Params: []endpoint.Param{
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get fitness age for (YYYY-MM-DD, defaults to today)"},
+		},
+		CLICommand:    "fitnessage",
+		CLISubcommand: "daily",
+		MCPTool:       "get_fitness_age",
+		Short:         "Get fitness age for a date",
+		Long:          "Get single-day fitness age details including chronological age, fitness age, achievable fitness age, and contributing components",
+		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
+			client, ok := c.(*garmin.Client)
+			if !ok {
+				return nil, fmt.Errorf("handler received invalid client type: %T, expected *garmin.Client", c)
+			}
+			return client.FitnessAge.GetDaily(ctx, args.Date("date"))
+		},
+	},
 	{
 		Name:       "GetFitnessAgeStats",
 		Service:    "FitnessAge",

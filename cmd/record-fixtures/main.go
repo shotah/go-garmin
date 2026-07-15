@@ -1,28 +1,11 @@
 // Command record-fixtures records API interactions for testing.
 //
-// Usage:
+// Workflow:
 //
-//	record-fixtures -email=user@example.com -password=secret
-//	record-fixtures -email=user@example.com -password=secret -cassette=activities
+//	make auth       # interactive login + MFA → settings.json
+//	make fixtures   # record all cassettes using settings.json
 //
-// This command authenticates with Garmin Connect and records API
-// responses to cassette files in testdata/cassettes/.
-//
-// Available cassettes:
-//   - sleep_daily
-//   - wellness_stress
-//   - wellness_body_battery
-//   - wellness_heart_rate
-//   - wellness_extended
-//   - activities
-//   - hrv
-//   - weight
-//   - metrics
-//   - userprofile
-//   - devices
-//   - biometric
-//   - workouts
-//   - courses_download
+// Omitting -cassette records every cassette.
 package main
 
 import (
@@ -39,13 +22,11 @@ import (
 
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 
-	garmin "github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/testutil"
+	garmin "github.com/shotah/go-garmin/garmin"
+	"github.com/shotah/go-garmin/testutil"
 )
 
 func main() {
-	email := flag.String("email", "", "Garmin Connect email")
-	password := flag.String("password", "", "Garmin Connect password")
 	date := flag.String("date", "", "Date to record (YYYY-MM-DD, defaults to today)")
 	cassette := flag.String("cassette", "", "Record only this cassette (defaults to all)")
 	listCassettes := flag.Bool("list", false, "List available cassettes and exit")
@@ -60,9 +41,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *email == "" || *password == "" {
-		fmt.Fprintln(os.Stderr, "Usage: record-fixtures -email=EMAIL -password=PASSWORD [-date=YYYY-MM-DD] [-cassette=NAME]")
-		fmt.Fprintln(os.Stderr, "       record-fixtures -list")
+	settingsPath := testutil.SettingsPath()
+	if !fileExists(settingsPath) {
+		fmt.Fprintln(os.Stderr, "No settings.json session found.")
+		fmt.Fprintln(os.Stderr, "Run interactive auth first:")
+		fmt.Fprintln(os.Stderr, "  make auth")
+		fmt.Fprintln(os.Stderr, "Then record fixtures:")
+		fmt.Fprintln(os.Stderr, "  make fixtures")
 		os.Exit(1)
 	}
 
@@ -84,7 +69,7 @@ func main() {
 		}
 	}
 
-	if err := recordFixtures(*email, *password, targetDate, *cassette); err != nil {
+	if err := recordFixtures(targetDate, *cassette); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -94,6 +79,11 @@ func main() {
 	} else {
 		fmt.Println("Done! All cassettes recorded to testdata/cassettes/")
 	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // cassetteRecorder defines a function that records a cassette.
@@ -107,6 +97,7 @@ func getCassetteRecorders() map[string]cassetteRecorder {
 		"wellness_body_battery": recordBodyBattery,
 		"wellness_heart_rate":   recordHeartRate,
 		"wellness_extended":     recordWellnessExtended,
+		"wellness_daily_extra":  recordWellnessDailyExtra,
 		"activities":            recordActivities,
 		"hrv":                   recordHRV,
 		"weight":                recordWeight,
@@ -120,6 +111,13 @@ func getCassetteRecorders() map[string]cassetteRecorder {
 		"courses_download":      recordCoursesDownload,
 		"fitnessage":            recordFitnessAge,
 		"fitnessstats":          recordFitnessStats,
+		"usersummary":           recordUserSummary,
+		"personalrecords":       recordPersonalRecords,
+		"badges":                recordBadges,
+		"bloodpressure":         recordBloodPressure,
+		"periodichealth":        recordPeriodicHealth,
+		"lifestyle":             recordLifestyle,
+		"trainingplans":         recordTrainingPlans,
 	}
 }
 
@@ -141,14 +139,12 @@ func isValidCassette(name string) bool {
 	return ok
 }
 
-func recordFixtures(email, password string, date time.Time, cassette string) error {
+func recordFixtures(date time.Time, cassette string) error {
 	ctx := context.Background()
 
-	// Step 1: Login once and record auth flow
-	fmt.Println("Recording authentication...")
-	session, err := recordAuth(ctx, email, password)
+	session, err := resolveSession()
 	if err != nil {
-		return fmt.Errorf("auth: %w", err)
+		return err
 	}
 
 	// Step 2: Record API calls using the saved session
@@ -183,29 +179,17 @@ func stopRecorder(rec *recorder.Recorder) error {
 	return rec.Stop()
 }
 
-// recordAuth logs in and records the auth flow, returning the session data.
-func recordAuth(ctx context.Context, email, password string) ([]byte, error) {
-	rec, err := testutil.NewRecordingRecorder("auth")
+func resolveSession() ([]byte, error) {
+	path := testutil.SettingsPath()
+	fmt.Printf("Using session from %s\n", path)
+	session, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("settings: read %s: %w", path, err)
 	}
-	defer func() { _ = stopRecorder(rec) }()
-
-	client := garmin.New(garmin.Options{
-		HTTPClient: testutil.HTTPClientWithRecorder(rec),
-	})
-
-	if err := client.Login(ctx, email, password); err != nil {
-		return nil, err
+	if len(bytes.TrimSpace(session)) == 0 {
+		return nil, fmt.Errorf("settings: %s is empty; run make auth", path)
 	}
-
-	// Save session for reuse
-	var buf bytes.Buffer
-	if err := client.SaveSession(&buf); err != nil {
-		return nil, fmt.Errorf("failed to save session: %w", err)
-	}
-
-	return buf.Bytes(), nil
+	return session, nil
 }
 
 // loadSession creates a client with the recorded session loaded.
@@ -217,6 +201,17 @@ func loadSession(rec *recorder.Recorder, session []byte) (*garmin.Client, error)
 	if err := client.LoadSession(bytes.NewReader(session)); err != nil {
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
+
+	// Keep settings.json in sync when OAuth tokens rotate mid-recording.
+	path := testutil.SettingsPath()
+	client.SetSessionPersister(func(c *garmin.Client) error {
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		return c.SaveSession(f)
+	})
 
 	return client, nil
 }
@@ -565,6 +560,14 @@ func recordMetrics(ctx context.Context, session []byte, date time.Time) error {
 		fmt.Printf("  Warning: hill score: %v\n", err)
 	}
 
+	hillStart := date.AddDate(0, 0, -7).Format("2006-01-02")
+	fmt.Printf("  Getting hill score stats %s..%s...\n", hillStart, dateStr)
+	hillStatsURL := fmt.Sprintf("https://connectapi.%s/metrics-service/metrics/hillscore/stats?startDate=%s&endDate=%s&aggregation=daily",
+		authState.Domain, hillStart, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, hillStatsURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: hill score stats: %v\n", err)
+	}
+
 	// Race predictions - requires display name from user profile
 	fmt.Println("  Getting social profile for display name...")
 	socialProfileURL := fmt.Sprintf("https://connectapi.%s/userprofile-service/socialProfile", authState.Domain)
@@ -580,6 +583,18 @@ func recordMetrics(ctx context.Context, session []byte, date time.Time) error {
 		_, err = doAPIRequest(ctx, httpClient, racePredictionsURL, authState.OAuth2AccessToken)
 		if err != nil {
 			fmt.Printf("  Warning: race predictions: %v\n", err)
+		}
+		fmt.Printf("  Getting daily race predictions for %s...\n", displayName)
+		raceDailyURL := fmt.Sprintf("https://connectapi.%s/metrics-service/metrics/racepredictions/daily/%s?fromCalendarDate=%s&toCalendarDate=%s",
+			authState.Domain, displayName, hillStart, dateStr)
+		if _, err := doAPIRequest(ctx, httpClient, raceDailyURL, authState.OAuth2AccessToken); err != nil {
+			fmt.Printf("  Warning: race predictions daily: %v\n", err)
+		}
+		fmt.Printf("  Getting monthly race predictions for %s...\n", displayName)
+		raceMonthlyURL := fmt.Sprintf("https://connectapi.%s/metrics-service/metrics/racepredictions/monthly/%s?fromCalendarDate=%s&toCalendarDate=%s",
+			authState.Domain, displayName, hillStart, dateStr)
+		if _, err := doAPIRequest(ctx, httpClient, raceMonthlyURL, authState.OAuth2AccessToken); err != nil {
+			fmt.Printf("  Warning: race predictions monthly: %v\n", err)
 		}
 	}
 
@@ -668,6 +683,13 @@ func recordFitnessAge(ctx context.Context, session []byte, date time.Time) error
 	_, err = doAPIRequest(ctx, httpClient, fitnessAgeURL, authState.OAuth2AccessToken)
 	if err != nil {
 		fmt.Printf("  Warning: fitness age stats: %v\n", err)
+	}
+
+	fmt.Printf("  Getting fitness age daily for %s...\n", endDate)
+	dailyURL := fmt.Sprintf("https://connectapi.%s/fitnessage-service/fitnessage/%s",
+		authState.Domain, endDate)
+	if _, err := doAPIRequest(ctx, httpClient, dailyURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: fitness age daily: %v\n", err)
 	}
 
 	return nil
@@ -881,6 +903,83 @@ func recordWellnessExtended(ctx context.Context, session []byte, date time.Time)
 	return nil
 }
 
+func recordWellnessDailyExtra(ctx context.Context, session []byte, date time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("wellness_daily_extra")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	var authState struct {
+		OAuth2AccessToken string `json:"oauth2_access_token"`
+		Domain            string `json:"domain"`
+	}
+	if err := json.Unmarshal(session, &authState); err != nil {
+		return fmt.Errorf("failed to parse session: %w", err)
+	}
+
+	httpClient := testutil.HTTPClientWithRecorder(rec)
+	dateStr := date.Format("2006-01-02")
+	startDate := date.AddDate(0, 0, -7).Format("2006-01-02")
+
+	fmt.Printf("  Getting daily events for %s...\n", dateStr)
+	eventsURL := fmt.Sprintf("https://connectapi.%s/wellness-service/wellness/dailyEvents?calendarDate=%s",
+		authState.Domain, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, eventsURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: daily events: %v\n", err)
+	}
+
+	fmt.Printf("  Getting floors chart for %s...\n", dateStr)
+	floorsURL := fmt.Sprintf("https://connectapi.%s/wellness-service/wellness/floorsChartData/daily/%s",
+		authState.Domain, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, floorsURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: floors: %v\n", err)
+	}
+
+	fmt.Printf("  Getting body battery reports %s..%s...\n", startDate, dateStr)
+	bbURL := fmt.Sprintf("https://connectapi.%s/wellness-service/wellness/bodyBattery/reports/daily?startDate=%s&endDate=%s",
+		authState.Domain, startDate, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, bbURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: body battery reports: %v\n", err)
+	}
+
+	fmt.Printf("  Getting sleep score stats %s..%s...\n", startDate, dateStr)
+	scoreURL := fmt.Sprintf("https://connectapi.%s/wellness-service/stats/daily/sleep/score/%s/%s",
+		authState.Domain, startDate, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, scoreURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: sleep score: %v\n", err)
+	}
+
+	fmt.Println("  Getting social profile for display name...")
+	socialProfileURL := fmt.Sprintf("https://connectapi.%s/userprofile-service/socialProfile", authState.Domain)
+	profileResp, err := doAPIRequest(ctx, httpClient, socialProfileURL, authState.OAuth2AccessToken)
+	if err != nil {
+		fmt.Printf("  Warning: social profile: %v\n", err)
+		return nil
+	}
+	displayName := getDisplayName(profileResp)
+	if displayName == "" {
+		fmt.Println("  Warning: empty display name, skipping displayName endpoints")
+		return nil
+	}
+
+	fmt.Printf("  Getting wellness daily sleep for %s...\n", displayName)
+	sleepURL := fmt.Sprintf("https://connectapi.%s/wellness-service/wellness/dailySleepData/%s?date=%s&nonSleepBufferMinutes=60",
+		authState.Domain, displayName, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, sleepURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: wellness sleep: %v\n", err)
+	}
+
+	fmt.Printf("  Getting daily summary chart (steps) for %s...\n", displayName)
+	stepsURL := fmt.Sprintf("https://connectapi.%s/wellness-service/wellness/dailySummaryChart/%s?date=%s",
+		authState.Domain, displayName, dateStr)
+	if _, err := doAPIRequest(ctx, httpClient, stepsURL, authState.OAuth2AccessToken); err != nil {
+		fmt.Printf("  Warning: steps chart: %v\n", err)
+	}
+
+	return nil
+}
+
 func recordBiometric(ctx context.Context, session []byte, date time.Time) error {
 	rec, err := testutil.NewRecordingRecorder("biometric")
 	if err != nil {
@@ -996,7 +1095,7 @@ func recordWorkouts(ctx context.Context, session []byte, _ time.Time) error {
 		return nil
 	}
 
-	// Get first workout details if any exist
+	// Get first workout details if any exist (no hardcoded IDs — those 404 on other accounts)
 	if len(workouts) > 0 {
 		if workoutID, ok := workouts[0]["workoutId"].(float64); ok {
 			fmt.Printf("  Getting workout %d details...\n", int64(workoutID))
@@ -1007,14 +1106,8 @@ func recordWorkouts(ctx context.Context, session []byte, _ time.Time) error {
 				fmt.Printf("  Warning: workout detail: %v\n", err)
 			}
 		}
-	}
-
-	// Also get strength training workout 1458299409
-	fmt.Println("  Getting strength workout 1458299409...")
-	strengthURL := fmt.Sprintf("https://connectapi.%s/workout-service/workout/1458299409", authState.Domain)
-	_, err = doAPIRequest(ctx, httpClient, strengthURL, authState.OAuth2AccessToken)
-	if err != nil {
-		fmt.Printf("  Warning: strength workout: %v\n", err)
+	} else {
+		fmt.Println("  No workouts on account; skipping detail recording")
 	}
 
 	return nil
@@ -1169,6 +1262,231 @@ func extractFirstCourseID(resp []map[string]any) int64 {
 		return 0
 	}
 	return int64(courseID)
+}
+
+func recordPersonalRecords(ctx context.Context, session []byte, _ time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("personalrecords")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	displayName, err := client.ResolveDisplayName(ctx, "")
+	if err != nil {
+		fmt.Printf("  Warning: display name: %v\n", err)
+		return nil
+	}
+	fmt.Printf("  Getting personal records for %s...\n", displayName)
+	if _, err := client.PersonalRecords.List(ctx, displayName); err != nil {
+		fmt.Printf("  Warning: personal records: %v\n", err)
+	}
+	return nil
+}
+
+func recordBadges(ctx context.Context, session []byte, _ time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("badges")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	fmt.Println("  Getting earned badges...")
+	if _, err := client.Badges.ListEarned(ctx); err != nil {
+		fmt.Printf("  Warning: earned badges: %v\n", err)
+	}
+	fmt.Println("  Getting available badges...")
+	if _, err := client.Badges.ListAvailable(ctx); err != nil {
+		fmt.Printf("  Warning: available badges: %v\n", err)
+	}
+	fmt.Println("  Getting badge challenges...")
+	if _, err := client.Badges.ListCompletedChallenges(ctx, 0, 20); err != nil {
+		fmt.Printf("  Warning: completed challenges: %v\n", err)
+	}
+	if _, err := client.Badges.ListAvailableChallenges(ctx, 0, 20); err != nil {
+		fmt.Printf("  Warning: available challenges: %v\n", err)
+	}
+	if _, err := client.Badges.ListNonCompletedChallenges(ctx, 0, 20); err != nil {
+		fmt.Printf("  Warning: non-completed challenges: %v\n", err)
+	}
+	if _, err := client.Badges.ListVirtualChallengesInProgress(ctx, 0, 20); err != nil {
+		fmt.Printf("  Warning: virtual challenges: %v\n", err)
+	}
+	if _, err := client.Badges.ListAdHocHistorical(ctx, 0, 20); err != nil {
+		fmt.Printf("  Warning: adhoc challenges: %v\n", err)
+	}
+	return nil
+}
+
+func recordBloodPressure(ctx context.Context, session []byte, date time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("bloodpressure")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	start := date.AddDate(0, 0, -30)
+	fmt.Printf("  Getting blood pressure %s..%s...\n", start.Format("2006-01-02"), date.Format("2006-01-02"))
+	if _, err := client.BloodPressure.GetRange(ctx, start, date); err != nil {
+		fmt.Printf("  Warning: blood pressure: %v\n", err)
+	}
+	return nil
+}
+
+func recordPeriodicHealth(ctx context.Context, session []byte, date time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("periodichealth")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Getting menstrual day view for %s...\n", date.Format("2006-01-02"))
+	if _, err := client.PeriodicHealth.GetMenstrualDayView(ctx, date); err != nil {
+		fmt.Printf("  Warning: menstrual day view: %v\n", err)
+	}
+	start := date.AddDate(0, 0, -90)
+	fmt.Printf("  Getting menstrual calendar %s..%s...\n", start.Format("2006-01-02"), date.Format("2006-01-02"))
+	if _, err := client.PeriodicHealth.GetMenstrualCalendar(ctx, start, date); err != nil {
+		fmt.Printf("  Warning: menstrual calendar: %v\n", err)
+	}
+	fmt.Println("  Getting pregnancy snapshot...")
+	if _, err := client.PeriodicHealth.GetPregnancySnapshot(ctx); err != nil {
+		fmt.Printf("  Warning: pregnancy snapshot: %v\n", err)
+	}
+	return nil
+}
+
+func recordLifestyle(ctx context.Context, session []byte, date time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("lifestyle")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Getting lifestyle log for %s...\n", date.Format("2006-01-02"))
+	if _, err := client.Lifestyle.GetDaily(ctx, date); err != nil {
+		fmt.Printf("  Warning: lifestyle: %v\n", err)
+	}
+	return nil
+}
+
+func recordTrainingPlans(ctx context.Context, session []byte, _ time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("trainingplans")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	fmt.Println("  Getting training plans...")
+	plans, err := client.TrainingPlans.List(ctx)
+	if err != nil {
+		fmt.Printf("  Warning: training plans: %v\n", err)
+		return nil
+	}
+	if plans == nil || len(plans.TrainingPlanList) == 0 {
+		fmt.Println("  No training plans on account")
+		return nil
+	}
+	plan := plans.TrainingPlanList[0]
+	fmt.Printf("  Getting plan detail %d (%s)...\n", plan.TrainingPlanID, plan.TrainingPlanCategory)
+	if _, err := client.TrainingPlans.Get(ctx, plan.TrainingPlanID, plan.TrainingPlanCategory); err != nil {
+		fmt.Printf("  Warning: plan detail: %v\n", err)
+	}
+	return nil
+}
+
+func recordUserSummary(ctx context.Context, session []byte, date time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("usersummary")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+
+	start := date.AddDate(0, 0, -7)
+	dateStr := date.Format("2006-01-02")
+	startStr := start.Format("2006-01-02")
+
+	fmt.Println("  Resolving display name...")
+	displayName, err := client.ResolveDisplayName(ctx, "")
+	if err != nil {
+		fmt.Printf("  Warning: display name: %v\n", err)
+	} else {
+		fmt.Printf("  Getting daily user summary for %s (%s)...\n", displayName, dateStr)
+		if _, err := client.UserSummary.GetDaily(ctx, displayName, date); err != nil {
+			fmt.Printf("  Warning: daily summary: %v\n", err)
+		}
+	}
+
+	fmt.Printf("  Getting daily hydration for %s...\n", dateStr)
+	if _, err := client.UserSummary.GetHydration(ctx, date); err != nil {
+		fmt.Printf("  Warning: hydration: %v\n", err)
+	}
+
+	fmt.Printf("  Getting steps daily %s..%s...\n", startStr, dateStr)
+	if _, err := client.UserSummary.GetStepsDaily(ctx, start, date); err != nil {
+		fmt.Printf("  Warning: steps daily: %v\n", err)
+	}
+
+	fmt.Printf("  Getting steps weekly ending %s...\n", dateStr)
+	if _, err := client.UserSummary.GetStepsWeekly(ctx, date, 4); err != nil {
+		fmt.Printf("  Warning: steps weekly: %v\n", err)
+	}
+
+	fmt.Printf("  Getting stress daily %s..%s...\n", startStr, dateStr)
+	if _, err := client.UserSummary.GetStressDaily(ctx, start, date); err != nil {
+		fmt.Printf("  Warning: stress daily: %v\n", err)
+	}
+
+	fmt.Printf("  Getting stress weekly ending %s...\n", dateStr)
+	if _, err := client.UserSummary.GetStressWeekly(ctx, date, 4); err != nil {
+		fmt.Printf("  Warning: stress weekly: %v\n", err)
+	}
+
+	fmt.Printf("  Getting hydration stats %s..%s...\n", startStr, dateStr)
+	if _, err := client.UserSummary.GetHydrationStats(ctx, start, date); err != nil {
+		fmt.Printf("  Warning: hydration stats: %v\n", err)
+	}
+
+	fmt.Printf("  Getting intensity minutes daily %s..%s...\n", startStr, dateStr)
+	if _, err := client.UserSummary.GetIntensityMinutesDaily(ctx, start, date); err != nil {
+		fmt.Printf("  Warning: im daily: %v\n", err)
+	}
+
+	imStart := date.AddDate(0, 0, -28)
+	fmt.Printf("  Getting intensity minutes weekly %s..%s...\n", imStart.Format("2006-01-02"), dateStr)
+	if _, err := client.UserSummary.GetIntensityMinutesWeekly(ctx, imStart, date); err != nil {
+		fmt.Printf("  Warning: im weekly: %v\n", err)
+	}
+
+	return nil
 }
 
 func doAPIRawRequest(ctx context.Context, client *http.Client, url, token string) error {

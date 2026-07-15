@@ -402,10 +402,39 @@ func (s *MetricsService) GetEnduranceScoreStats(ctx context.Context, startDate, 
 	return fetch[EnduranceScoreStats](ctx, s.client, path)
 }
 
+// HillScoreStatsGroup represents a single time period's hill score statistics.
+type HillScoreStatsGroup struct {
+	GroupAverage int `json:"groupAverage"`
+	GroupMax     int `json:"groupMax"`
+}
+
+// HillScoreStats represents hill score statistics over a date range.
+type HillScoreStats struct {
+	UserProfilePK int64                           `json:"userProfilePK"`
+	StartDate     string                          `json:"startDate"`
+	EndDate       string                          `json:"endDate"`
+	Avg           int                             `json:"avg"`
+	Max           int                             `json:"max"`
+	GroupMap      map[string]*HillScoreStatsGroup `json:"groupMap"`
+	HillScore     *HillScore                      `json:"hillScoreDTO"`
+	raw           json.RawMessage
+}
+
+func (h *HillScoreStats) RawJSON() json.RawMessage { return h.raw }
+
+func (h *HillScoreStats) SetRaw(data json.RawMessage) { h.raw = data }
+
 // GetHillScore retrieves hill score data for the specified date.
 func (s *MetricsService) GetHillScore(ctx context.Context, date time.Time) (*HillScore, error) {
 	path := "/metrics-service/metrics/hillscore?calendarDate=" + date.Format("2006-01-02")
 	return fetch[HillScore](ctx, s.client, path)
+}
+
+// GetHillScoreStats retrieves hill score statistics for a date range.
+func (s *MetricsService) GetHillScoreStats(ctx context.Context, startDate, endDate time.Time, aggregation Aggregation) (*HillScoreStats, error) {
+	path := fmt.Sprintf("/metrics-service/metrics/hillscore/stats?startDate=%s&endDate=%s&aggregation=%s",
+		startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), aggregation)
+	return fetch[HillScoreStats](ctx, s.client, path)
 }
 
 // GetMaxMetLatest retrieves the latest VO2 max / MET data.
@@ -490,8 +519,54 @@ func (r *RacePredictions) TimeMarathonDuration() time.Duration {
 	return time.Duration(r.TimeMarathon) * time.Second
 }
 
+// RacePredictionsList is a list of race prediction snapshots.
+type RacePredictionsList struct {
+	Entries []RacePredictions
+	raw     json.RawMessage
+}
+
+func (r *RacePredictionsList) RawJSON() json.RawMessage { return r.raw }
+
+func (r *RacePredictionsList) SetRaw(data json.RawMessage) { r.raw = data }
+
+func (r *RacePredictionsList) UnmarshalJSON(data []byte) error {
+	var arr []RacePredictions
+	if err := json.Unmarshal(data, &arr); err == nil {
+		r.Entries = arr
+		return nil
+	}
+	var one RacePredictions
+	if err := json.Unmarshal(data, &one); err != nil {
+		return err
+	}
+	r.Entries = []RacePredictions{one}
+	return nil
+}
+
 // GetRacePredictionsLatest retrieves the latest race predictions for the user.
 func (s *MetricsService) GetRacePredictionsLatest(ctx context.Context, displayName string) (*RacePredictions, error) {
 	path := "/metrics-service/metrics/racepredictions/latest/" + displayName
 	return fetch[RacePredictions](ctx, s.client, path)
+}
+
+// GetRacePredictionsDaily retrieves daily race predictions for a date range.
+func (s *MetricsService) GetRacePredictionsDaily(ctx context.Context, displayName string, start, end time.Time) (*RacePredictionsList, error) {
+	path := fmt.Sprintf(
+		"/metrics-service/metrics/racepredictions/daily/%s?fromCalendarDate=%s&toCalendarDate=%s",
+		displayName,
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return fetch[RacePredictionsList](ctx, s.client, path)
+}
+
+// GetRacePredictionsMonthly retrieves monthly race predictions for a date range.
+func (s *MetricsService) GetRacePredictionsMonthly(ctx context.Context, displayName string, start, end time.Time) (*RacePredictionsList, error) {
+	path := fmt.Sprintf(
+		"/metrics-service/metrics/racepredictions/monthly/%s?fromCalendarDate=%s&toCalendarDate=%s",
+		displayName,
+		start.Format("2006-01-02"),
+		end.Format("2006-01-02"),
+	)
+	return fetch[RacePredictionsList](ctx, s.client, path)
 }

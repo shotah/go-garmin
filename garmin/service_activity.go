@@ -287,7 +287,8 @@ func (a *Activity) ToListItem() ActivityListItem {
 		ElevationGain: a.ElevationGain,
 		LocationName:  a.LocationName,
 	}
-	for _, s := range a.SplitSummaries {
+	for i := range a.SplitSummaries {
+		s := &a.SplitSummaries[i]
 		if s.SplitType != "CLIMB_ACTIVE" {
 			continue
 		}

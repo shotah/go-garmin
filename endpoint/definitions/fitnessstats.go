@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 // parseMetrics parses a comma-separated string of metrics into a slice.

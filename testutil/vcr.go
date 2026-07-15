@@ -64,13 +64,33 @@ var (
 	courseGPXURLPattern       = regexp.MustCompile(`/course-service/course/gpx/\d+`)
 	courseFITURLPattern       = regexp.MustCompile(`/course-service/course/fit/\d+`)
 
-	// Profile image URLs
-	profileImageURLPattern = regexp.MustCompile(`"(ownerProfileImageUrl[^"]*|profileImageUrl[^"]*)"\s*:\s*"https://s3\.amazonaws\.com/garmin-connect-prod/profile_images/[^"]*"`)
+	// displayName (often a UUID) embedded in API paths
+	// [^\n/?]+ keeps path redaction on a single line (avoids eating YAML into "HTTP/2.0").
+	userSummaryDailyURLPattern     = regexp.MustCompile(`(/usersummary-service/usersummary/daily/)[^\n/?]+`)
+	wellnessDailySleepURLPattern   = regexp.MustCompile(`(/wellness-service/wellness/dailySleepData/)[^\n/?]+`)
+	wellnessDailySummaryURLPattern = regexp.MustCompile(`(/wellness-service/wellness/dailySummaryChart/)[^\n/?]+`)
+	personalRecordsURLPattern      = regexp.MustCompile(`(/personalrecord-service/personalrecord/prs/)[^\n/?]+`)
+
+	// Profile image URLs (key-specific + any s3 profile_images path)
+	profileImageURLPattern    = regexp.MustCompile(`"(ownerProfileImageUrl[^"]*|profileImageUrl[^"]*)"\s*:\s*"https://s3\.amazonaws\.com/garmin-connect-prod/profile_images/[^"]*"`)
+	profileImagesPathPattern  = regexp.MustCompile(`https://s3\.amazonaws\.com/garmin-connect-prod/profile_images/[^"\\]+`)
+	deviceSettingsFilePattern = regexp.MustCompile(`"deviceSettingsFile"\s*:\s*"[^"]*"`)
 
 	// Profile image filenames (contain UUIDs)
 	profileImgNameLargePattern  = regexp.MustCompile(`"profileImgNameLarge"\s*:\s*"[^"]*"`)
 	profileImgNameMediumPattern = regexp.MustCompile(`"profileImgNameMedium"\s*:\s*"[^"]*"`)
 	profileImgNameSmallPattern  = regexp.MustCompile(`"profileImgNameSmall"\s*:\s*"[^"]*"`)
+
+	// Activity / workout naming (may contain home city, routes, etc.)
+	activityNamePattern = regexp.MustCompile(`"activityName"\s*:\s*"[^"]*"`)
+	workoutNamePattern  = regexp.MustCompile(`"workoutName"\s*:\s*"[^"]*"`)
+
+	// UUIDs that can identify accounts or activities
+	activityUUIDStringPattern = regexp.MustCompile(`"activityUUID"\s*:\s*"[^"]*"`)
+	activityUUIDObjectPattern = regexp.MustCompile(`"activityUUID"\s*:\s*\{\s*"uuid"\s*:\s*"[^"]*"\s*\}`)
+	uuidFieldPattern          = regexp.MustCompile(`"uuid"\s*:\s*"[0-9a-fA-F-]{36}"`)
+	jtiPattern                = regexp.MustCompile(`"jti"\s*:\s*"[^"]*"`)
+	consumerKeyPattern        = regexp.MustCompile(`"consumer"\s*:\s*"[^"]*"`)
 
 	// Auth-related patterns
 	ticketPattern          = regexp.MustCompile(`ticket=ST-[^&"\\]+`)
@@ -82,25 +102,59 @@ var (
 	garminGUIDCamelPattern = regexp.MustCompile(`"garminGUID"\s*:\s*"[^"]*"`)
 )
 
-// CassetteDir is the directory where cassettes are stored.
-const CassetteDir = "testdata/cassettes"
+const zeroUUID = "00000000-0000-0000-0000-000000000000"
+
+// CassetteDir returns the path to the VCR cassette directory
+// (module-root/testdata/cassettes), regardless of the caller's working directory.
+func CassetteDir() string {
+	return filepath.Join(ModuleRoot(), "testdata", "cassettes")
+}
+
+// SettingsPath returns the path to the local auth session file
+// (module-root/settings.json). Created by `garmin-auth` / `make auth`.
+func SettingsPath() string {
+	return filepath.Join(ModuleRoot(), "settings.json")
+}
+
+// ModuleRoot walks up from the current working directory to find the directory
+// containing go.mod. Falls back to "." if none is found.
+func ModuleRoot() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	dir := wd
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return wd
+		}
+		dir = parent
+	}
+}
 
 // sensitiveHeaders are headers that should be sanitized in recordings.
 var sensitiveHeaders = []string{
 	"Authorization",
 	"Cookie",
 	"Set-Cookie",
+	"X-Vcap-Request-Id",
+	"X-Request-Id",
 }
 
 // NewRecorder creates a new VCR recorder for the given cassette name.
 // In recording mode, it records HTTP interactions to the cassette file.
 // In replay mode, it replays recorded interactions.
 func NewRecorder(cassetteName string, mode recorder.Mode) (*recorder.Recorder, error) {
-	cassettePath := filepath.Join(CassetteDir, cassetteName)
+	dir := CassetteDir()
+	cassettePath := filepath.Join(dir, cassetteName)
 
 	// Ensure cassette directory exists
 	if mode == recorder.ModeRecordOnly || mode == recorder.ModeRecordOnce {
-		if err := os.MkdirAll(CassetteDir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, err
 		}
 	}
@@ -175,6 +229,12 @@ func sanitizeHook(i *cassette.Interaction) error {
 	// Anonymize displayName/UUID in race predictions URLs
 	i.Request.URL = racePredictionsURLPattern.ReplaceAllString(i.Request.URL, "/racepredictions/$1/anonymous")
 
+	// Anonymize displayName path segments (account UUID or username)
+	i.Request.URL = userSummaryDailyURLPattern.ReplaceAllString(i.Request.URL, "${1}anonymous")
+	i.Request.URL = wellnessDailySleepURLPattern.ReplaceAllString(i.Request.URL, "${1}anonymous")
+	i.Request.URL = wellnessDailySummaryURLPattern.ReplaceAllString(i.Request.URL, "${1}anonymous")
+	i.Request.URL = personalRecordsURLPattern.ReplaceAllString(i.Request.URL, "${1}anonymous")
+
 	// Anonymize course IDs in URL paths (specific patterns before general)
 	i.Request.URL = courseGPXURLPattern.ReplaceAllString(i.Request.URL, "/course-service/course/gpx/87654321")
 	i.Request.URL = courseFITURLPattern.ReplaceAllString(i.Request.URL, "/course-service/course/fit/87654321")
@@ -235,6 +295,17 @@ func anonymizeBody(body string) string {
 	body = birthDatePattern.ReplaceAllString(body, `"birthDate":"1990-01-01"`)
 	body = locationPattern.ReplaceAllString(body, `"location":"Anonymous City"`)
 
+	// Names that often encode home city / personal routes
+	body = activityNamePattern.ReplaceAllString(body, `"activityName":"Anonymous Activity"`)
+	body = workoutNamePattern.ReplaceAllString(body, `"workoutName":"Anonymous Workout"`)
+
+	// Activity / token UUIDs
+	body = activityUUIDObjectPattern.ReplaceAllString(body, `"activityUUID":{"uuid":"`+zeroUUID+`"}`)
+	body = activityUUIDStringPattern.ReplaceAllString(body, `"activityUUID":"`+zeroUUID+`"`)
+	body = uuidFieldPattern.ReplaceAllString(body, `"uuid":"`+zeroUUID+`"`)
+	body = jtiPattern.ReplaceAllString(body, `"jti":"`+zeroUUID+`"`)
+	body = consumerKeyPattern.ReplaceAllString(body, `"consumer":"`+zeroUUID+`"`)
+
 	// Device info
 	body = deviceIDPattern.ReplaceAllString(body, `"deviceId":12345678`)
 	body = unitIDPattern.ReplaceAllString(body, `"unitId":12345678`)
@@ -259,6 +330,8 @@ func anonymizeBody(body string) string {
 
 	// Profile image URLs
 	body = profileImageURLPattern.ReplaceAllString(body, `"$1":"https://example.com/profile.png"`)
+	body = profileImagesPathPattern.ReplaceAllString(body, `https://example.com/profile.png`)
+	body = deviceSettingsFilePattern.ReplaceAllString(body, `"deviceSettingsFile":"anonymous-device-settings.json"`)
 
 	// Profile image filenames
 	body = profileImgNameLargePattern.ReplaceAllString(body, `"profileImgNameLarge":"anonymous-profile-large.png"`)

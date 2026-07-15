@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/llehouerou/go-garmin"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 var loginCmd = &cobra.Command{

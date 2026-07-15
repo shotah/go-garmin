@@ -65,3 +65,15 @@ type FitnessStatsService struct{ client *Client }
 
 // CourseService provides access to course-related API endpoints.
 type CourseService struct{ client *Client }
+
+// UserSummaryService provides access to daily totals, hydration, and stats endpoints.
+type UserSummaryService struct{ client *Client }
+
+// TrainingPlanService provides access to Garmin Coach / training plan endpoints.
+type TrainingPlanService struct{ client *Client }
+
+// LifestyleService provides access to lifestyle logging endpoints.
+type LifestyleService struct{ client *Client }
+
+// PeriodicHealthService provides access to menstrual cycle and pregnancy endpoints.
+type PeriodicHealthService struct{ client *Client }

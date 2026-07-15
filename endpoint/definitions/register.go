@@ -1,7 +1,7 @@
 // endpoint/definitions/register.go
 package definitions
 
-import "github.com/llehouerou/go-garmin/endpoint"
+import "github.com/shotah/go-garmin/endpoint"
 
 // RegisterAll registers all endpoint definitions with the registry.
 func RegisterAll(r *endpoint.Registry) {
@@ -52,5 +52,26 @@ func RegisterAll(r *endpoint.Registry) {
 	}
 	for i := range CourseEndpoints {
 		r.Register(CourseEndpoints[i])
+	}
+	for i := range UserSummaryEndpoints {
+		r.Register(UserSummaryEndpoints[i])
+	}
+	for i := range PersonalRecordsEndpoints {
+		r.Register(PersonalRecordsEndpoints[i])
+	}
+	for i := range BadgeEndpoints {
+		r.Register(BadgeEndpoints[i])
+	}
+	for i := range BloodPressureEndpoints {
+		r.Register(BloodPressureEndpoints[i])
+	}
+	for i := range PeriodicHealthEndpoints {
+		r.Register(PeriodicHealthEndpoints[i])
+	}
+	for i := range LifestyleEndpoints {
+		r.Register(LifestyleEndpoints[i])
+	}
+	for i := range TrainingPlanEndpoints {
+		r.Register(TrainingPlanEndpoints[i])
 	}
 }

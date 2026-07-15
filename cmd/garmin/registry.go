@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/llehouerou/go-garmin/endpoint"
-	"github.com/llehouerou/go-garmin/endpoint/definitions"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint/definitions"
 )
 
 // endpointRegistry is the global registry for all endpoint definitions.

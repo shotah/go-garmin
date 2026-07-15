@@ -114,7 +114,7 @@ func upload[T any, PT interface {
 
 // sendEmpty performs a request expecting no response body (e.g., DELETE).
 // Returns APIError if the response status is not in the 2xx range.
-func sendEmpty(ctx context.Context, c *Client, method, path string) error {
+func sendEmpty(ctx context.Context, c *Client, method, path string) error { //nolint:unparam // method kept for call-site clarity
 	resp, err := c.doAPI(ctx, method, path, http.NoBody)
 	if err != nil {
 		return err

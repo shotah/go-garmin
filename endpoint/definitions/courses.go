@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	garmin "github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	garmin "github.com/shotah/go-garmin/garmin"
 )
 
 // CourseEndpoints defines all course-related API endpoints.

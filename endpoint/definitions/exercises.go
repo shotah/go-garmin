@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/llehouerou/go-garmin/endpoint"
-	"github.com/llehouerou/go-garmin/exercises"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/exercises"
 )
 
 // ExerciseEndpoints defines endpoints for the exercise library.

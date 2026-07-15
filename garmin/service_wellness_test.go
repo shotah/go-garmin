@@ -407,3 +407,107 @@ func TestDailyIntensityMinutesRawJSON(t *testing.T) {
 		t.Error("RawJSON should return original JSON")
 	}
 }
+
+func TestDailyEventsJSONRoundTrip(t *testing.T) {
+	rawJSON := `{"userProfilePK":12345678,"calendarDate":"2026-01-27","autoActivityDetected":true}`
+
+	var events DailyEvents
+	if err := json.Unmarshal([]byte(rawJSON), &events); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	out, err := json.Marshal(events)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if string(out) != rawJSON {
+		t.Errorf("Marshal = %s, want original payload", out)
+	}
+	if string(events.RawJSON()) != rawJSON {
+		t.Error("RawJSON mismatch")
+	}
+}
+
+func TestDailySummaryChartJSONUnmarshal(t *testing.T) {
+	rawJSON := `[
+		{"startGMT":"2026-01-27T08:00:00.0","endGMT":"2026-01-27T08:15:00.0","steps":120,"pushes":0,"primaryActivityLevel":"active"},
+		{"startGMT":"2026-01-27T08:15:00.0","endGMT":"2026-01-27T08:30:00.0","steps":45,"pushes":0,"primaryActivityLevel":"sedentary"}
+	]`
+
+	var chart DailySummaryChart
+	if err := json.Unmarshal([]byte(rawJSON), &chart); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	chart.SetRaw(json.RawMessage(rawJSON))
+	if len(chart.Intervals) != 2 {
+		t.Fatalf("Intervals = %d, want 2", len(chart.Intervals))
+	}
+	if chart.Intervals[0].Steps != 120 || chart.Intervals[0].PrimaryActivityLevel != "active" {
+		t.Errorf("interval0 = %+v", chart.Intervals[0])
+	}
+	if string(chart.RawJSON()) != rawJSON {
+		t.Error("RawJSON mismatch")
+	}
+}
+
+func TestDailyFloorsJSONUnmarshal(t *testing.T) {
+	rawJSON := `{
+		"startTimestampGMT": "2026-01-27T00:00:00.0",
+		"endTimestampGMT": "2026-01-27T23:59:00.0",
+		"startTimestampLocal": "2026-01-27T00:00:00.0",
+		"endTimestampLocal": "2026-01-27T23:59:00.0",
+		"floorsValueDescriptorDTOList": [
+			{"key": "startTimeGMT", "index": 0},
+			{"key": "endTimeGMT", "index": 1},
+			{"key": "floorsAscended", "index": 2},
+			{"key": "floorsDescended", "index": 3}
+		],
+		"floorValuesArray": [["2026-01-27T00:00:00.0", "2026-01-27T00:15:00.0", 1, 0]]
+	}`
+
+	var floors DailyFloors
+	if err := json.Unmarshal([]byte(rawJSON), &floors); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	floors.SetRaw(json.RawMessage(rawJSON))
+	if len(floors.FloorsValueDescriptorList) != 4 {
+		t.Errorf("descriptors = %d", len(floors.FloorsValueDescriptorList))
+	}
+	if len(floors.FloorValuesArray) != 1 {
+		t.Errorf("values = %d", len(floors.FloorValuesArray))
+	}
+	if string(floors.RawJSON()) != rawJSON {
+		t.Error("RawJSON mismatch")
+	}
+}
+
+func TestBodyBatteryReportsJSONUnmarshal(t *testing.T) {
+	rawJSON := `[{"date":"2026-01-27","charged":45,"drained":60,"bodyBatteryValuesArray":[[1,"charging",50,1.0]]}]`
+
+	var reports BodyBatteryReports
+	if err := json.Unmarshal([]byte(rawJSON), &reports); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	reports.SetRaw(json.RawMessage(rawJSON))
+	if len(reports.Reports) != 1 || reports.Reports[0].Charged != 45 {
+		t.Fatalf("reports = %+v", reports.Reports)
+	}
+	if string(reports.RawJSON()) != rawJSON {
+		t.Error("RawJSON mismatch")
+	}
+}
+
+func TestSleepScoreStatsJSONUnmarshal(t *testing.T) {
+	rawJSON := `[{"calendarDate":"2026-01-27","value":82,"qualifierKey":"GOOD"}]`
+
+	var stats SleepScoreStats
+	if err := json.Unmarshal([]byte(rawJSON), &stats); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	stats.SetRaw(json.RawMessage(rawJSON))
+	if len(stats.Entries) != 1 || stats.Entries[0].Value != 82 {
+		t.Fatalf("entries = %+v", stats.Entries)
+	}
+	if string(stats.RawJSON()) != rawJSON {
+		t.Error("RawJSON mismatch")
+	}
+}

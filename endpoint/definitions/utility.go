@@ -4,17 +4,20 @@ import (
 	"context"
 	"time"
 
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
 )
 
 // UtilityEndpoints defines utility endpoints that don't call the Garmin API.
 var UtilityEndpoints = []endpoint.Endpoint{
 	{
-		Name:    "GetCurrentDate",
-		Service: "Utility",
-		MCPTool: "get_current_date",
-		Short:   "Get current date",
-		Long:    "Get the current date including year, month, day, and weekday. Useful for determining what date to use for other API calls.",
+		Name:       "GetCurrentDate",
+		Service:    "Utility",
+		Cassette:   "none",
+		Path:       "local://current-date",
+		HTTPMethod: "GET",
+		MCPTool:    "get_current_date",
+		Short:      "Get current date",
+		Long:       "Get the current date including year, month, day, and weekday. Useful for determining what date to use for other API calls.",
 		Handler: func(_ context.Context, _ any, _ *endpoint.HandlerArgs) (any, error) {
 			now := time.Now()
 			return map[string]any{

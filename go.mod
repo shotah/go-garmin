@@ -1,4 +1,4 @@
-module github.com/llehouerou/go-garmin
+module github.com/shotah/go-garmin
 
 go 1.25.5
 

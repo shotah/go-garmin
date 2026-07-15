@@ -3,9 +3,10 @@ package definitions
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/llehouerou/go-garmin"
-	"github.com/llehouerou/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/endpoint"
+	"github.com/shotah/go-garmin/garmin"
 )
 
 // MetricsEndpoints defines all metrics-related endpoints.
@@ -74,6 +75,122 @@ var MetricsEndpoints = []endpoint.Endpoint{
 				return nil, fmt.Errorf("handler received invalid client type: %T, expected *garmin.Client", c)
 			}
 			return client.Metrics.GetHillScore(ctx, args.Date("date"))
+		},
+	},
+	{
+		Name:       "GetHillScoreStats",
+		Service:    "Metrics",
+		Cassette:   "metrics",
+		Path:       "/metrics-service/metrics/hillscore/stats",
+		HTTPMethod: "GET",
+		Params: []endpoint.Param{
+			{Name: "range", Type: endpoint.ParamTypeDateRange, Required: false, Description: "Date range for hill score stats (defaults to last 7 days)"},
+			{Name: "aggregation", Type: endpoint.ParamTypeString, Required: false, Description: "Aggregation period: daily, weekly, monthly, yearly (default: daily)"},
+		},
+		CLICommand:    "metrics",
+		CLISubcommand: "hill-stats",
+		MCPTool:       "get_hill_score_stats",
+		Short:         "Get hill score stats",
+		Long:          "Get hill score statistics over a date range with optional aggregation",
+		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
+			client, ok := c.(*garmin.Client)
+			if !ok {
+				return nil, fmt.Errorf("handler received invalid client type: %T, expected *garmin.Client", c)
+			}
+			end := time.Now()
+			start := end.AddDate(0, 0, -7)
+			if args.HasParam("start") {
+				start = args.Date("start")
+			}
+			if args.HasParam("end") {
+				end = args.Date("end")
+			}
+			aggregation := garmin.AggregationDaily
+			if agg := args.String("aggregation"); agg != "" {
+				switch agg {
+				case "daily":
+					aggregation = garmin.AggregationDaily
+				case "weekly":
+					aggregation = garmin.AggregationWeekly
+				case "monthly":
+					aggregation = garmin.AggregationMonthly
+				case "yearly":
+					aggregation = garmin.AggregationYearly
+				default:
+					return nil, fmt.Errorf("invalid aggregation: %s (valid: daily, weekly, monthly, yearly)", agg)
+				}
+			}
+			return client.Metrics.GetHillScoreStats(ctx, start, end, aggregation)
+		},
+	},
+	{
+		Name:       "GetRacePredictionsDaily",
+		Service:    "Metrics",
+		Cassette:   "metrics",
+		Path:       "/metrics-service/metrics/racepredictions/daily/{displayName}",
+		HTTPMethod: "GET",
+		Params: []endpoint.Param{
+			{Name: "display_name", Type: endpoint.ParamTypeString, Required: false, Description: "User display name (defaults to current user)"},
+			{Name: "range", Type: endpoint.ParamTypeDateRange, Required: false, Description: "Date range for daily race predictions (defaults to last 7 days)"},
+		},
+		CLICommand:    "metrics",
+		CLISubcommand: "race-predictions-daily",
+		MCPTool:       "get_race_predictions_daily",
+		Short:         "Get daily race predictions",
+		Long:          "Get daily race prediction snapshots for a date range",
+		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
+			client, ok := c.(*garmin.Client)
+			if !ok {
+				return nil, fmt.Errorf("handler received invalid client type: %T, expected *garmin.Client", c)
+			}
+			displayName, err := client.ResolveDisplayName(ctx, args.String("display_name"))
+			if err != nil {
+				return nil, err
+			}
+			end := time.Now()
+			start := end.AddDate(0, 0, -7)
+			if args.HasParam("start") {
+				start = args.Date("start")
+			}
+			if args.HasParam("end") {
+				end = args.Date("end")
+			}
+			return client.Metrics.GetRacePredictionsDaily(ctx, displayName, start, end)
+		},
+	},
+	{
+		Name:       "GetRacePredictionsMonthly",
+		Service:    "Metrics",
+		Cassette:   "metrics",
+		Path:       "/metrics-service/metrics/racepredictions/monthly/{displayName}",
+		HTTPMethod: "GET",
+		Params: []endpoint.Param{
+			{Name: "display_name", Type: endpoint.ParamTypeString, Required: false, Description: "User display name (defaults to current user)"},
+			{Name: "range", Type: endpoint.ParamTypeDateRange, Required: false, Description: "Date range for monthly race predictions (defaults to last 7 days)"},
+		},
+		CLICommand:    "metrics",
+		CLISubcommand: "race-predictions-monthly",
+		MCPTool:       "get_race_predictions_monthly",
+		Short:         "Get monthly race predictions",
+		Long:          "Get monthly race prediction snapshots for a date range",
+		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
+			client, ok := c.(*garmin.Client)
+			if !ok {
+				return nil, fmt.Errorf("handler received invalid client type: %T, expected *garmin.Client", c)
+			}
+			displayName, err := client.ResolveDisplayName(ctx, args.String("display_name"))
+			if err != nil {
+				return nil, err
+			}
+			end := time.Now()
+			start := end.AddDate(0, 0, -7)
+			if args.HasParam("start") {
+				start = args.Date("start")
+			}
+			if args.HasParam("end") {
+				end = args.Date("end")
+			}
+			return client.Metrics.GetRacePredictionsMonthly(ctx, displayName, start, end)
 		},
 	},
 	{

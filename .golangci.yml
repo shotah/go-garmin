@@ -13,7 +13,7 @@ linters:
     - forcetypeassert
     - goconst
     - gocritic
-    - gomodguard
+    - gomodguard_v2
     - gosec
     - intrange
     - misspell
@@ -30,6 +30,10 @@ linters:
     - unparam
     - usestdlibvars
   settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 5
+      ignore-tests: true
     gocritic:
       disabled-checks:
         - hugeParam
@@ -44,6 +48,15 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
+    rules:
+      # Declarative endpoint registry repeats HTTP verbs, param names, and descriptions by design.
+      - linters:
+          - goconst
+        path: endpoint/definitions/
+      - linters:
+          - goconst
+          - gosec
+        path: _test\.go
     paths:
       - third_party$
       - builtin$
