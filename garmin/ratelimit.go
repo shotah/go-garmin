@@ -14,9 +14,11 @@ type RateLimitConfig struct {
 }
 
 func DefaultRateLimitConfig() RateLimitConfig {
+	// Client-side courtesy throttle (Garmin's limits are undocumented).
+	// ~30/min sustained with a small burst keeps MCP snappy without hammering Connect.
 	return RateLimitConfig{
-		RequestsPerMinute: 15,
-		BurstSize:         5,
+		RequestsPerMinute: 30,
+		BurstSize:         8,
 	}
 }
 

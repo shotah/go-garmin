@@ -31,10 +31,32 @@ This creates/updates cassette files in `testdata/cassettes/`.
 ## Running tests
 
 ```bash
+# Unit tests (default — what pre-commit / CI / make check run)
 make test
-go test -v ./...
-go test -v -run Integration ./...
+go test ./...
 ```
+
+### Integration tests (opt-in)
+
+Integration tests replay VCR cassettes. They are behind `//go:build integration`, so they do **not** run with plain `go test`, pre-commit, or CI.
+
+**Prerequisite:** authenticate first so fixtures can be recorded/updated. Without a session, `make fixtures` cannot refresh cassettes and integration tests will fail on date/ID mismatches.
+
+```bash
+# 1) Login → gitignored settings.json (required)
+make auth
+# equivalent: go run ./cmd/garmin-auth
+
+# 2) Record/refresh cassettes using that session
+make fixtures
+# or: make fixtures CASSETTE=hrv
+
+# 3) Run integration tests
+make test-integration
+# equivalent: go test ./garmin/ -tags=integration -v
+```
+
+Committed cassettes can replay without a live login, but they must match what the tests request. After API or date drift, always re-run `make auth` → `make fixtures` before `make test-integration`.
 
 ## Pre-commit
 

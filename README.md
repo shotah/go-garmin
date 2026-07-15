@@ -411,11 +411,32 @@ make check                # same checks as the pre-commit hook
 make validate-endpoints   # endpoint registry completeness
 make cli                  # build ./bin/garmin
 
-# Fixture recording (gitignored settings.json — no .env)
-make auth                 # interactive login → settings.json
-make fixtures             # record/update all VCR cassettes
+# Fixture recording + VCR integration tests (auth required first)
+make auth                 # interactive login → settings.json (required)
+make fixtures             # record/update VCR cassettes
 make fixtures CASSETTE=metrics
+make test-integration     # go test -tags=integration (needs auth + fixtures)
 ```
+
+## Releasing
+
+Go modules are **not** published to GitHub Packages. Publishing is a git tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+That makes the library installable as:
+
+```bash
+go get github.com/shotah/go-garmin@v0.1.0
+go install github.com/shotah/go-garmin/cmd/garmin@v0.1.0
+```
+
+Pushing a `v*` tag also runs **GoReleaser**, which attaches multi-platform `garmin` CLI binaries to a [GitHub Release](https://github.com/shotah/go-garmin/releases) (linux/mac/windows). That’s the right place for downloadable binaries; GitHub Packages is a poor fit for Go source modules.
+
+CI runs on every PR/push to `main` (build, lint, endpoint validation, non-integration tests).
 
 ## License
 

@@ -24,7 +24,8 @@ type Options struct {
 	HTTPClient *http.Client
 	MFAHandler func() (string, error)
 	RateLimit  *RateLimitConfig
-	Domain     string // "garmin.com" or "garmin.cn"
+	Retry      *RetryConfig // nil uses DefaultRetryConfig (short, MCP-friendly)
+	Domain     string       // "garmin.com" or "garmin.cn"
 }
 
 // Client is the main entry point for interacting with Garmin services.
@@ -73,10 +74,14 @@ func New(opts Options) *Client {
 	if opts.RateLimit != nil {
 		rlConfig = *opts.RateLimit
 	}
+	retryConfig := DefaultRetryConfig()
+	if opts.Retry != nil {
+		retryConfig = *opts.Retry
+	}
 
 	c := &Client{
 		opts:      opts,
-		transport: newHTTPTransport(opts.HTTPClient, defaultRetryConfig(), newRateLimiter(rlConfig)),
+		transport: newHTTPTransport(opts.HTTPClient, retryConfig, newRateLimiter(rlConfig)),
 		auth:      &authState{Domain: opts.Domain},
 	}
 

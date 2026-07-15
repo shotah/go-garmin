@@ -43,7 +43,7 @@ func TestRateLimiterNoInfiniteLoop(t *testing.T) {
 	// The bug: lastTime was reset to now on every iteration, splitting elapsed
 	// time across iterations so integer division never produced a token.
 	rl := newRateLimiter(RateLimitConfig{
-		RequestsPerMinute: 15, // 4 second interval (same as production)
+		RequestsPerMinute: 15, // 4s interval — fixed for this regression case
 		BurstSize:         1,
 	})
 

@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help fmt vet lint test test-race test-short coverage check \
+.PHONY: help fmt vet lint test test-integration test-race test-short coverage check \
 	build cli install tidy deps clean record-fixtures record fixtures auth \
 	validate-endpoints install-hooks tools run
 
@@ -28,11 +28,12 @@ help: ## Show this help
 	@echo   fmt                    Format imports/code (goimports-reviser)
 	@echo   vet                    Static analysis (go vet)
 	@echo   lint                   Full lint suite (golangci-lint)
-	@echo   test                   Run all tests (PKG=./path/... for one package)
-	@echo   test-short             Skip long/integration-style tests (-short)
-	@echo   test-race              Run tests with the race detector
+	@echo   test                   Unit tests only (no VCR integration)
+	@echo   test-integration       VCR cassette tests (-tags=integration)
+	@echo   test-short             Unit tests with -short
+	@echo   test-race              Unit tests with the race detector
 	@echo   coverage               Library coverage report (excludes cmd/)
-	@echo   check                  Autofix, lint, validate endpoints, and test
+	@echo   check                  Autofix, lint, validate endpoints, and unit tests
 	@echo.
 	@echo Build ^& run
 	@echo   build                  Compile all packages (sanity check)
@@ -70,13 +71,17 @@ vet: ## Static analysis (go vet) — catches bugs gofmt won't
 lint: ## Full lint suite (golangci-lint; no write)
 	golangci-lint run ./...
 
-test: ## Run all tests (PKG=./path/... for one package)
+test: ## Unit tests only (PKG=./path/... for one package; no VCR integration)
 	go test $(PKG)
 
-test-short: ## Skip long/integration-style tests (-short)
+test-integration: ## VCR integration tests (run make auth && make fixtures first)
+	@echo "Note: refresh cassettes with: make auth && make fixtures"
+	go test ./garmin/ -tags=integration -count=1 -timeout 5m
+
+test-short: ## Unit tests with -short
 	go test -short $(PKG)
 
-test-race: ## Run tests with the race detector (slower, worth it)
+test-race: ## Unit tests with the race detector (slower, worth it)
 	go test -race $(PKG)
 
 # Default coverage scope excludes cmd/ (CLI mains drag totals down).

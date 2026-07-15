@@ -1,11 +1,15 @@
-// integration_test.go
+//go:build integration
+
+// Integration tests using recorded VCR cassettes.
 //
-// Integration tests using recorded API interactions (cassettes).
-// To record new cassettes:
+// Not run by default (make test / pre-commit / CI). Opt in with:
 //
-//	go run ./cmd/record-fixtures -email=EMAIL -password=PASSWORD
+//	make auth                 // required first → settings.json
+//	make fixtures             // record/refresh cassettes
+//	make test-integration     // or: go test ./garmin/ -tags=integration
 //
-// Tests will skip if cassettes don't exist.
+// Without make auth (or go run ./cmd/garmin-auth), you cannot refresh
+// cassettes; stale recordings will fail with "requested interaction not found".
 package garmin
 
 import (
@@ -35,6 +39,8 @@ func newTestClient(t *testing.T, rec *recorder.Recorder) *Client {
 
 	client := New(Options{
 		HTTPClient: testutil.HTTPClientWithRecorder(rec),
+		// Cassette mismatches must fail immediately (no retry/backoff sleep).
+		Retry: &RetryConfig{MaxRetries: 0},
 	})
 
 	// Load fake session to make client "authenticated"

@@ -9,7 +9,15 @@ make check
 make validate-endpoints
 ```
 
-Or install the git hook once: `make install-hooks` (autofix + lint + validate + test on commit).
+Or install the git hook once: `make install-hooks` (autofix + lint + validate + unit tests on commit).
+
+VCR integration tests are opt-in and are **not** part of `make check`. They require a prior auth session to record/refresh cassettes:
+
+```bash
+make auth                 # required first → settings.json
+make fixtures             # record/update cassettes
+make test-integration     # go test -tags=integration
+```
 
 ## Adding endpoints
 

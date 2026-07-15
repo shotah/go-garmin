@@ -4,35 +4,41 @@ package garmin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
-type retryConfig struct {
+// RetryConfig controls HTTP retry/backoff for transient failures.
+// Nil Options.Retry uses DefaultRetryConfig (tuned for snappy CLI/MCP).
+type RetryConfig struct {
 	MaxRetries     int
 	InitialBackoff time.Duration
 	MaxBackoff     time.Duration
 }
 
-func defaultRetryConfig() retryConfig {
-	return retryConfig{
-		MaxRetries:     3,
-		InitialBackoff: time.Second,
-		MaxBackoff:     30 * time.Second,
+func DefaultRetryConfig() RetryConfig {
+	return RetryConfig{
+		MaxRetries:     2,
+		InitialBackoff: 200 * time.Millisecond,
+		MaxBackoff:     2 * time.Second,
 	}
 }
 
 type httpTransport struct {
 	client      *http.Client
-	retry       retryConfig
+	retry       RetryConfig
 	rateLimiter *rateLimiter
 }
 
-func newHTTPTransport(client *http.Client, retry retryConfig, rl *rateLimiter) *httpTransport {
+func newHTTPTransport(client *http.Client, retry RetryConfig, rl *rateLimiter) *httpTransport {
 	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+		// Keep per-request timeout modest so MCP/CLI don't sit on dead sockets.
+		client = &http.Client{Timeout: 15 * time.Second}
 	}
 	return &httpTransport{
 		client:      client,
@@ -71,14 +77,14 @@ func (t *httpTransport) do(req *http.Request) (*http.Response, error) {
 		resp, err := t.client.Do(req)
 		if err != nil {
 			lastErr = err
-			if !t.shouldRetry(0, attempt) {
+			if !t.shouldRetryError(err, attempt) {
 				return nil, err
 			}
 			t.backoff(req.Context(), attempt)
 			continue
 		}
 
-		if !t.shouldRetry(resp.StatusCode, attempt) {
+		if !t.shouldRetryStatus(resp.StatusCode, attempt) {
 			return resp, nil
 		}
 
@@ -96,14 +102,41 @@ func (t *httpTransport) do(req *http.Request) (*http.Response, error) {
 	return nil, ErrMaxRetriesExceeded
 }
 
-func (t *httpTransport) shouldRetry(statusCode, attempt int) bool {
+func (t *httpTransport) shouldRetryStatus(statusCode, attempt int) bool {
 	if attempt >= t.retry.MaxRetries {
 		return false
 	}
-	if statusCode == 0 {
-		return true // network error
-	}
 	return statusCode == http.StatusTooManyRequests || statusCode >= http.StatusInternalServerError
+}
+
+func (t *httpTransport) shouldRetryError(err error, attempt int) bool {
+	if attempt >= t.retry.MaxRetries {
+		return false
+	}
+	return isTransientTransportError(err)
+}
+
+// isTransientTransportError reports whether err is worth a short retry.
+// Permanent failures (context cancel, VCR miss, most non-timeout errors) fail fast
+// so MCP/CLI stay snappy and tests don't sleep on cassette mismatches.
+func isTransientTransportError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	// go-vcr replay miss — not a network blip
+	msg := err.Error()
+	if strings.Contains(msg, "requested interaction not found") {
+		return false
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	return false
 }
 
 func (t *httpTransport) backoff(ctx context.Context, attempt int) {
