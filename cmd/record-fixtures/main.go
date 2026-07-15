@@ -118,6 +118,7 @@ func getCassetteRecorders() map[string]cassetteRecorder {
 		"periodichealth":        recordPeriodicHealth,
 		"lifestyle":             recordLifestyle,
 		"trainingplans":         recordTrainingPlans,
+		"golf":                  recordGolf,
 	}
 }
 
@@ -1414,6 +1415,39 @@ func recordTrainingPlans(ctx context.Context, session []byte, _ time.Time) error
 	fmt.Printf("  Getting plan detail %d (%s)...\n", plan.TrainingPlanID, plan.TrainingPlanCategory)
 	if _, err := client.TrainingPlans.Get(ctx, plan.TrainingPlanID, plan.TrainingPlanCategory); err != nil {
 		fmt.Printf("  Warning: plan detail: %v\n", err)
+	}
+	return nil
+}
+
+func recordGolf(ctx context.Context, session []byte, _ time.Time) error {
+	rec, err := testutil.NewRecordingRecorder("golf")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stopRecorder(rec) }()
+
+	client, err := loadSession(rec, session)
+	if err != nil {
+		return err
+	}
+	fmt.Println("  Getting golf scorecard summaries...")
+	summaries, err := client.Golf.ListScorecards(ctx, 0, 20)
+	if err != nil {
+		fmt.Printf("  Warning: golf summary: %v\n", err)
+		return nil
+	}
+	id := summaries.FirstID()
+	if id == 0 {
+		fmt.Println("  No golf scorecards on account")
+		return nil
+	}
+	fmt.Printf("  Getting golf scorecard detail %d...\n", id)
+	if _, err := client.Golf.GetScorecard(ctx, id); err != nil {
+		fmt.Printf("  Warning: golf scorecard: %v\n", err)
+	}
+	fmt.Printf("  Getting golf shot data for scorecard %d...\n", id)
+	if _, err := client.Golf.GetShotData(ctx, id, ""); err != nil {
+		fmt.Printf("  Warning: golf shots: %v\n", err)
 	}
 	return nil
 }

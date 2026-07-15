@@ -382,14 +382,15 @@ Gamification only — low value for health/training analysis. Kept together so t
 
 Only pursue if a specific audience or missing REST capability forces it.
 
-### Golf
+### Golf (`/gcs-golfcommunity/api/v2/`)
 
-Scorecards for golfers. Paths poorly documented publicly.
+Garmin Golf scorecards (community API used by Connect). CLI: `garmin golf …`.
 
 | Status | Method | Endpoint | Description |
 |--------|--------|----------|-------------|
-| [ ] | GET | Golf scorecard summary endpoint | Golf round summaries |
-| [ ] | GET | Golf scorecard detail endpoint | Individual scorecard data |
+| [x] | GET | `/gcs-golfcommunity/api/v2/scorecard/summary?per-page={limit}&start={start}` | Golf round summaries |
+| [x] | GET | `/gcs-golfcommunity/api/v2/scorecard/detail?scorecard-ids={id}&include-longest-shot-distance=true` | Scorecard detail |
+| [x] | GET | `/gcs-golfcommunity/api/v2/shot/scorecard/{id}/hole?hole-numbers={holes}` | Shot-by-shot hole data |
 
 ### Mobile gateway (`/mobile-gateway/`)
 
@@ -445,6 +446,7 @@ Modern Connect UI query API. Powerful but hard to reverse-engineer — last reso
 6. Personal records, training plans, badges/challenges
 7. Hill score stats, race prediction daily/monthly
 8. Blood pressure (read/write), menstrual/pregnancy, lifestyle GET (+ custom behaviour create)
+9. Golf scorecards (summary, detail, shot data)
 
 ### High priority (remaining)
 1. **Upload** — import FIT/TCX/GPX
@@ -458,7 +460,6 @@ Modern Connect UI query API. Powerful but hard to reverse-engineer — last reso
 3. User stats RHR series
 
 ### Low priority
-1. Golf
-2. Mobile gateway duplicates
-3. GraphQL gateway
-4. Convenience leftovers (epoch reload, solar, last-used device)
+1. Mobile gateway duplicates
+2. GraphQL gateway
+3. Convenience leftovers (epoch reload, solar, last-used device)

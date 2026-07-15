@@ -204,6 +204,11 @@ garmin health pregnancy
 # Lifestyle logging
 garmin lifestyle daily [date]
 garmin lifestyle create-behaviour --json='{"name":"Went drinking",...}'
+
+# Golf scorecards
+garmin golf list [--start=0] [--limit=20]
+garmin golf get <scorecard-id>
+garmin golf shots <scorecard-id> [--holes=1,2,3,...]
 ```
 
 ## MCP server (LLM integration)
@@ -227,7 +232,7 @@ When the MCP host connects, it asks the server for its tool list. For each regis
 Flow:
 
 1. Host starts `garmin mcp` and loads `session.json`.
-2. Host sends `tools/list` → model gets names + descriptions + schemas (~97 tools).
+2. Host sends `tools/list` → model gets names + descriptions + schemas (~100 tools).
 3. Model picks a tool and arguments (e.g. `get_sleep` with `date=2026-07-14`).
 4. Host sends `tools/call` → handler hits Garmin Connect → result comes back as JSON text.
 5. Model reasons over that JSON to answer you.
@@ -306,7 +311,7 @@ Add to Cursor MCP settings:
 
 ### Available tools
 
-The MCP server exposes **97 tools** generated from the endpoint registry:
+The MCP server exposes **100 tools** generated from the endpoint registry:
 
 | Category | Tools |
 |----------|-------|
@@ -328,6 +333,7 @@ The MCP server exposes **97 tools** generated from the endpoint registry:
 | Blood pressure | `get_blood_pressure_range`, `log_blood_pressure`, `delete_blood_pressure` |
 | Periodic health | `get_menstrual_day_view`, `get_menstrual_calendar`, `get_pregnancy_snapshot` |
 | Lifestyle | `get_daily_lifestyle_log`, `create_lifestyle_behaviour` |
+| Golf | `list_golf_scorecards`, `get_golf_scorecard`, `get_golf_shot_data` |
 
 ### LLM-powered workout creation
 
@@ -389,7 +395,7 @@ func main() {
 
 Common service entry points on `*garmin.Client`:
 
-`Sleep`, `Wellness`, `Activities`, `Weight`, `HRV`, `Metrics`, `FitnessAge`, `FitnessStats`, `Biometric`, `Devices`, `UserProfile`, `Workouts`, `Exercises`, `Calendar`, `Courses`, `UserSummary`, `PersonalRecords`, `TrainingPlans`, `Badges`, `BloodPressure`, `PeriodicHealth`, `Lifestyle`
+`Sleep`, `Wellness`, `Activities`, `Weight`, `HRV`, `Metrics`, `FitnessAge`, `FitnessStats`, `Biometric`, `Devices`, `UserProfile`, `Workouts`, `Exercises`, `Calendar`, `Courses`, `UserSummary`, `PersonalRecords`, `TrainingPlans`, `Badges`, `BloodPressure`, `PeriodicHealth`, `Lifestyle`, `Golf`
 
 ## Architecture
 
@@ -420,23 +426,27 @@ make test-integration     # go test -tags=integration (needs auth + fixtures)
 
 ## Releasing
 
-Go modules are **not** published to GitHub Packages. Publishing is a git tag:
+Go modules are **not** published to GitHub Packages. The current release is tracked in [`VERSION`](VERSION) and as a git tag.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+make version                 # show VERSION file + latest tag
+make release                 # patch bump (v0.1.0 → v0.1.1), commit VERSION, tag, push
+make release BUMP=minor      # v0.1.0 → v0.2.0
+make release BUMP=major      # v0.1.0 → v1.0.0
+make release TAG=v0.2.0      # set an explicit version
+make release DRY_RUN=1       # print next version only
 ```
 
-That makes the library installable as:
+Working tree must be clean (commit golf/other work first). Pushing the `v*` tag runs **GoReleaser** and publishes multi-platform CLI binaries to [GitHub Releases](https://github.com/shotah/go-garmin/releases).
+
+Install a released version:
 
 ```bash
 go get github.com/shotah/go-garmin@v0.1.0
 go install github.com/shotah/go-garmin/cmd/garmin@v0.1.0
 ```
 
-Pushing a `v*` tag also runs **GoReleaser**, which attaches multi-platform `garmin` CLI binaries to a [GitHub Release](https://github.com/shotah/go-garmin/releases) (linux/mac/windows). That’s the right place for downloadable binaries; GitHub Packages is a poor fit for Go source modules.
-
-CI runs on every PR/push to `main` (build, lint, endpoint validation, non-integration tests).
+CI runs on every PR/push to `main` (build, lint, endpoint validation, unit tests).
 
 ## License
 

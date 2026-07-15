@@ -7,10 +7,14 @@
 
 .PHONY: help fmt vet lint test test-integration test-race test-short coverage check \
 	build cli install tidy deps clean record-fixtures record fixtures auth \
-	validate-endpoints install-hooks tools run
+	validate-endpoints install-hooks tools run release version
 
+# Build-time version stamp (git describe). Release tags are tracked in ./VERSION.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X main.version=$(VERSION)
+
+# Release bump: patch (default), minor, or major. Or set TAG=v0.2.0 explicitly.
+BUMP ?= patch
 
 # Optional: `make test PKG=./endpoint/...` or `make coverage PKG=./...`
 PKG ?= ./...
@@ -53,6 +57,8 @@ help: ## Show this help
 	@echo   record                 Alias for fixtures
 	@echo   record-fixtures        Build VCR fixture recorder into ./bin/
 	@echo   install-hooks          Install git pre-commit (autofix + lint + test)
+	@echo   version                Show current VERSION file + latest git tag
+	@echo   release                Bump tag, update VERSION, push (BUMP=patch^|minor^|major)
 	@echo.
 	@echo Tooling
 	@echo   tools                  Install goimports-reviser + golangci-lint v2
@@ -160,6 +166,23 @@ else
 	chmod +x .git/hooks/pre-commit
 endif
 	@echo "Installed .git/hooks/pre-commit"
+
+version: ## Show VERSION file and latest git tag / next patch
+	@go run ./cmd/release -dry-run
+
+# Bump semver, commit VERSION, annotated-tag, push HEAD + tag (triggers GoReleaser).
+# Examples:
+#   make release
+#   make release BUMP=minor
+#   make release BUMP=major
+#   make release TAG=v0.2.0
+#   make release DRY_RUN=1
+release: ## Bump version tag, update VERSION, push (BUMP=patch|minor|major)
+	go run ./cmd/release \
+		$(if $(TAG),-version=$(TAG),-bump=$(BUMP)) \
+		$(if $(DRY_RUN),-dry-run,) \
+		$(if $(SKIP_PUSH),-skip-push,) \
+		$(if $(ALLOW_DIRTY),-allow-dirty,)
 
 ##@ Tooling (skip if you use nix develop / direnv)
 

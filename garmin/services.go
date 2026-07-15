@@ -77,3 +77,6 @@ type LifestyleService struct{ client *Client }
 
 // PeriodicHealthService provides access to menstrual cycle and pregnancy endpoints.
 type PeriodicHealthService struct{ client *Client }
+
+// GolfService provides access to Garmin Golf scorecard endpoints.
+type GolfService struct{ client *Client }

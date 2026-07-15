@@ -3,12 +3,67 @@ package garmin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestGolfListScorecardsAndDetailPaths(t *testing.T) {
+	seen := map[string]bool{}
+	client := testAuthedClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		seen[r.URL.RequestURI()] = true
+		switch {
+		case strings.Contains(r.URL.Path, "/scorecard/summary"):
+			body := `{"scorecardSummaries":[{"id":42,"courseName":"Anonymous Course","score":85}]}`
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+		case strings.Contains(r.URL.Path, "/scorecard/detail"):
+			body := `{"scorecards":[{"id":42,"score":85}]}`
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+		case strings.Contains(r.URL.Path, "/shot/scorecard/"):
+			body := `{"holes":[{"holeNumber":1}]}`
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+		default:
+			return nil, fmt.Errorf("unexpected path %s", r.URL.Path)
+		}
+	}))
+
+	summaries, err := client.Golf.ListScorecards(context.Background(), 0, 20)
+	if err != nil || summaries.FirstID() != 42 {
+		t.Fatalf("summaries=%+v err=%v", summaries, err)
+	}
+	detail, err := client.Golf.GetScorecard(context.Background(), 42)
+	if err != nil || !json.Valid(detail.RawJSON()) {
+		t.Fatalf("detail err=%v raw=%s", err, detail.RawJSON())
+	}
+	shots, err := client.Golf.GetShotData(context.Background(), 42, "1,2")
+	if err != nil || !json.Valid(shots.RawJSON()) {
+		t.Fatalf("shots err=%v raw=%s", err, shots.RawJSON())
+	}
+	if !seen["/gcs-golfcommunity/api/v2/scorecard/summary?per-page=20&start=0"] {
+		t.Fatalf("missing summary path: %#v", seen)
+	}
+	if !seen["/gcs-golfcommunity/api/v2/scorecard/detail?include-longest-shot-distance=true&scorecard-ids=42"] &&
+		!seen["/gcs-golfcommunity/api/v2/scorecard/detail?scorecard-ids=42&include-longest-shot-distance=true"] {
+		t.Fatalf("missing detail path: %#v", seen)
+	}
+}
+
+func TestGolfListScorecardsEmptyAccount(t *testing.T) {
+	client := testAuthedClient(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		body := `{"pageNumber":1,"rowsPerPage":20,"totalRows":0}`
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+	}))
+	summaries, err := client.Golf.ListScorecards(context.Background(), 0, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summaries.FirstID() != 0 || len(summaries.ScorecardSummaries) != 0 {
+		t.Fatalf("expected empty summaries, got %+v", summaries)
+	}
+}
 
 func TestPersonalRecordsList(t *testing.T) {
 	body := `[{"typeId":3,"value":1200,"activityId":1,"prStartTimeGmtFormatted":"2026-01-01 12:00:00"}]`

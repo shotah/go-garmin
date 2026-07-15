@@ -161,6 +161,7 @@ func TestAllServicesInitialized(t *testing.T) {
 		{"Steps", client.Steps},
 		{"UserProfile", client.UserProfile},
 		{"UserSummary", client.UserSummary},
+		{"Golf", client.Golf},
 	}
 
 	for _, s := range services {

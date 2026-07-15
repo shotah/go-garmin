@@ -57,6 +57,7 @@ type Client struct {
 	TrainingPlans   *TrainingPlanService
 	Lifestyle       *LifestyleService
 	PeriodicHealth  *PeriodicHealthService
+	Golf            *GolfService
 
 	opts             Options
 	transport        *httpTransport
@@ -113,6 +114,7 @@ func New(opts Options) *Client {
 	c.TrainingPlans = &TrainingPlanService{client: c}
 	c.Lifestyle = &LifestyleService{client: c}
 	c.PeriodicHealth = &PeriodicHealthService{client: c}
+	c.Golf = &GolfService{client: c}
 
 	return c
 }
