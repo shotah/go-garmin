@@ -112,9 +112,10 @@ var CourseEndpoints = []endpoint.Endpoint{
 		},
 	},
 	{
-		Name:       "DownloadCourseFIT",
-		Service:    "Courses",
-		Cassette:   "courses_download",
+		Name:    "DownloadCourseFIT",
+		Service: "Courses",
+		// Binary/GPS payload — cassette is gitignored (courses_download.yaml); not validated in CI.
+		Cassette:   "none",
 		Path:       "/course-service/course/fit/{course_id}/0",
 		HTTPMethod: "GET",
 		RawOutput:  true,

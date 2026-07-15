@@ -125,8 +125,11 @@ func (v *Validator) checkOrphanedCassettes() []string {
 		name := filepath.Base(f)
 		name = name[:len(name)-5] // Remove .yaml
 
-		if name == "auth" {
-			continue // Skip auth cassette
+		// Intentionally unreferenced / not committed:
+		// - auth: login flow only
+		// - courses_download: binary GPX/FIT (gitignored; endpoints use Cassette "none")
+		if name == "auth" || name == "courses_download" {
+			continue
 		}
 
 		if !usedCassettes[name] {
