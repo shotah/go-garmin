@@ -24,7 +24,9 @@ func TestMCPGenerator_RegisterTools(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Verify tool was registered by listing tools
 	tools := s.ListTools()
@@ -50,7 +52,9 @@ func TestMCPGenerator_SkipsRawOutputEndpoints(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	tools := s.ListTools()
 	if len(tools) != 0 {
@@ -71,7 +75,9 @@ func TestMCPGenerator_SkipsEndpointsWithoutMCPTool(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	tools := s.ListTools()
 	if len(tools) != 0 {
@@ -96,7 +102,9 @@ func TestMCPGenerator_MultipleParams(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	tools := s.ListTools()
 	if len(tools) != 1 {
@@ -120,7 +128,9 @@ func TestMCPGenerator_DateRangeParams(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	tools := s.ListTools()
 	if len(tools) != 1 {
@@ -144,7 +154,9 @@ func TestMCPGenerator_BoolParam(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	tools := s.ListTools()
 	if len(tools) != 1 {
@@ -168,7 +180,9 @@ func TestMCPGenerator_RequiredParam(t *testing.T) {
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
-	gen.RegisterTools(s)
+	if _, err := gen.RegisterTools(s, ToolFilter{}); err != nil {
+		t.Fatal(err)
+	}
 
 	tools := s.ListTools()
 	if len(tools) != 1 {

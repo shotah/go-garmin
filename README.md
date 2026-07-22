@@ -215,6 +215,37 @@ garmin golf shots <scorecard-id> [--holes=1,2,3,...]
 
 `garmin mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io/) server over stdio. Hosts like Claude Code, Claude Desktop, and Cursor spawn that process and let the model call tools.
 
+### Narrowing the tool surface
+
+By default every eligible endpoint is published (~100 tools). That is often too
+large for small chat models. Filter at registration:
+
+| Flag | Meaning | Default |
+|------|---------|---------|
+| `--tools` | Space/comma-separated **services** (`sleep`, `wellness`, `hrv`, `weight`, `activities`, `metrics`, …) | all |
+| `--tool-tier` | Depth within those services: `core` \| `extended` \| `complete` | `complete` |
+
+```bash
+# ~10 recovery / coaching tools (sleep, weight, BB, HRV, readiness, activities + climbing splits)
+garmin mcp --tool-tier core
+
+# Same, but only from selected services
+garmin mcp --tools "sleep wellness hrv weight activities metrics utility" --tool-tier core
+```
+
+**`core`:** `get_current_date`, `get_sleep`, `get_weight`, `get_body_battery`,
+`get_hrv`, `get_training_readiness`, `list_activities`, `get_activity`,
+`get_activity_typed_splits`, `get_activity_split_summaries`.
+
+**`extended`:** core plus `get_stress`, `get_heart_rate`,
+`get_body_battery_reports`, `get_sleep_score_stats`, `get_intensity_minutes`,
+`get_training_status`, `get_vo2max`, `get_activity_details`,
+`get_daily_user_summary`.
+
+**`complete`:** all tools in the selected services (historical behavior).
+
+Unknown `--tools` service names fail boot. Published count is logged on stderr.
+
 ### What the AI actually reads
 
 The model does **not** automatically read this README, `ENDPOINTS.md`, or the Go source.
@@ -231,14 +262,15 @@ When the MCP host connects, it asks the server for its tool list. For each regis
 
 Flow:
 
-1. Host starts `garmin mcp` and loads `session.json`.
-2. Host sends `tools/list` → model gets names + descriptions + schemas (~100 tools).
+1. Host starts `garmin mcp` (optionally with `--tool-tier` / `--tools`) and loads `session.json`.
+2. Host sends `tools/list` → model gets names + descriptions + schemas (filtered set, or ~100 by default).
 3. Model picks a tool and arguments (e.g. `get_sleep` with `date=2026-07-14`).
 4. Host sends `tools/call` → handler hits Garmin Connect → result comes back as JSON text.
 5. Model reasons over that JSON to answer you.
 
 Useful implications:
 
+- Prefer `--tool-tier core` (or `extended`) for personal-assistant hosts so the model is not flooded.
 - Better `Long` / param descriptions in endpoint definitions = better tool use.
 - `get_current_date` is a local helper (no Garmin call) so the model can resolve “today” / “yesterday”.
 - Binary downloads (`RawOutput`) are CLI-only and are **not** registered as MCP tools.
@@ -259,7 +291,7 @@ Add to `~/.claude.json` (global) or `.claude/settings.json` (project):
   "mcpServers": {
     "garmin": {
       "command": "garmin",
-      "args": ["mcp"]
+      "args": ["mcp", "--tool-tier", "core"]
     }
   }
 }
@@ -274,7 +306,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "garmin": {
       "command": "garmin",
-      "args": ["mcp"]
+      "args": ["mcp", "--tool-tier", "core"]
     }
   }
 }
@@ -288,7 +320,7 @@ Add to Cursor MCP settings:
 {
   "garmin": {
     "command": "garmin",
-    "args": ["mcp"]
+    "args": ["mcp", "--tool-tier", "core"]
   }
 }
 ```
@@ -311,7 +343,8 @@ Add to Cursor MCP settings:
 
 ### Available tools
 
-The MCP server exposes **100 tools** generated from the endpoint registry:
+With `--tool-tier complete` (default), the MCP server exposes **100 tools**
+generated from the endpoint registry:
 
 | Category | Tools |
 |----------|-------|

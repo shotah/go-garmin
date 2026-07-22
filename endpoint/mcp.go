@@ -24,14 +24,25 @@ func NewMCPGenerator(registry *Registry, client any) *MCPGenerator {
 	return &MCPGenerator{registry: registry, client: client}
 }
 
-// RegisterTools adds all endpoint tools to the MCP server.
-func (g *MCPGenerator) RegisterTools(s *server.MCPServer) {
+// RegisterTools adds endpoint tools to the MCP server, optionally filtered.
+// A zero ToolFilter (or TierComplete with empty Services) registers every
+// eligible tool — the historical default (~100 tools).
+func (g *MCPGenerator) RegisterTools(s *server.MCPServer, filter ToolFilter) (int, error) {
+	if filter.Tier == "" {
+		filter.Tier = TierComplete
+	}
+	if err := filter.ValidateServices(g.registry); err != nil {
+		return 0, err
+	}
+	n := 0
 	for _, ep := range g.registry.endpoints {
-		if ep.MCPTool == "" || ep.RawOutput {
+		if !filter.Allows(ep) {
 			continue
 		}
 		g.registerTool(s, ep)
+		n++
 	}
+	return n, nil
 }
 
 func (g *MCPGenerator) registerTool(s *server.MCPServer, ep *Endpoint) {
