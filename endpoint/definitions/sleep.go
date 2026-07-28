@@ -30,9 +30,9 @@ var SleepEndpoints = []endpoint.Endpoint{
 
 		CLICommand: "sleep",
 		MCPTool:    "get_sleep",
-		Short:      "Sleep score + stages for a night",
-		Long: "Primary sleep tool: overnight sleep score, duration, deep/light/REM, awake time, Body Battery change. " +
-			"Use for 'how did I sleep', 'sleep score', 'last night'. Call immediately — do not narrate. " +
+		Short:      "Sleep score + stages (use for last night)",
+		Long: "ONLY tool for overnight sleep / sleep score / 'how did I sleep' / 'last night' / sleep history. " +
+			"Returns score, duration, deep/light/REM, awake time. Call immediately — do not narrate, do not use get_body_battery. " +
 			"For 'last night', omit date or pass today (wake-up day). Prefer over get_wellness_sleep.",
 
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {

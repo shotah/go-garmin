@@ -46,10 +46,11 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		CLICommand:    "wellness",
 		CLISubcommand: "body-battery",
 		MCPTool:       "get_body_battery",
-		Short:         "Body Battery charge/drain events",
-		Long: "Body Battery events for one day: sleep recharge, stress/activity drain, and timing. " +
-			"Use for 'body battery', 'energy level', 'am I drained'. " +
-			"For multi-day charged/drained totals use get_body_battery_reports. Not a sleep score — use get_sleep.",
+		Short:         "Body Battery energy events (NOT sleep score)",
+		Long: "NOT for sleep score / 'how did I sleep' / last night — use get_sleep for that. " +
+			"Body Battery charge/drain events for one day (energy timeline). " +
+			"Use only for 'body battery', 'energy level', 'am I drained'. " +
+			"Multi-day totals: get_body_battery_reports.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
