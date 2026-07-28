@@ -23,17 +23,17 @@ var SleepEndpoints = []endpoint.Endpoint{
 				Name:     "date",
 				Type:     endpoint.ParamTypeDate,
 				Required: false,
-				Description: "Wake-up calendar day (YYYY-MM-DD). For 'last night' / this morning's sleep, omit or pass today — " +
-					"not yesterday. Defaults to today.",
+				Description: "Wake-up calendar day (YYYY-MM-DD). CRITICAL: 'last night' / 'this morning' = TODAY " +
+					"(or omit). Example: if today is 2026-07-28, pass 2026-07-28 — NOT 2026-07-27. Defaults to today.",
 			},
 		},
 
 		CLICommand: "sleep",
 		MCPTool:    "get_sleep",
 		Short:      "Sleep score + stages for a night",
-		Long: "Primary sleep tool: overnight sleep score, total duration, deep/light/REM stages, awake time, " +
-			"and Body Battery change. Use for 'how did I sleep', 'sleep score', 'last night', sleep quality. " +
-			"Prefer this over get_wellness_sleep. For multi-day score trends only, use get_sleep_score_stats.",
+		Long: "Primary sleep tool: overnight sleep score, duration, deep/light/REM, awake time, Body Battery change. " +
+			"Use for 'how did I sleep', 'sleep score', 'last night'. Call immediately — do not narrate. " +
+			"For 'last night', omit date or pass today (wake-up day). Prefer over get_wellness_sleep.",
 
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
