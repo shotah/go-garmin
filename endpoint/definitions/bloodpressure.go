@@ -47,8 +47,9 @@ var BloodPressureEndpoints = []endpoint.Endpoint{
 		CLICommand:    "bp",
 		CLISubcommand: "range",
 		MCPTool:       "get_blood_pressure_range",
-		Short:         "Get blood pressure range",
-		Long:          "Get blood pressure measurements and category stats for a date range",
+		Short:         "Blood pressure readings in range",
+		Long: "Blood pressure measurements and category stats over a date range (default last 7 days). " +
+			"Use for 'blood pressure history', BP trends.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -75,8 +76,9 @@ var BloodPressureEndpoints = []endpoint.Endpoint{
 		CLICommand:    "bp",
 		CLISubcommand: "log",
 		MCPTool:       "log_blood_pressure",
-		Short:         "Log blood pressure",
-		Long:          "Log a manual blood pressure measurement. Use --file, --json, or stdin. Live API uses POST.",
+		Short:         "Log a BP reading",
+		Long: "Log manual systolic/diastolic/pulse to Connect via JSON body. " +
+			"Use for 'log blood pressure'. --file, --json, or stdin; live API uses POST.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -102,8 +104,9 @@ var BloodPressureEndpoints = []endpoint.Endpoint{
 		CLICommand:    "bp",
 		CLISubcommand: "delete",
 		MCPTool:       "delete_blood_pressure",
-		Short:         "Delete blood pressure",
-		Long:          "Delete a blood pressure measurement by calendar date and version",
+		Short:         "Remove a BP entry",
+		Long: "Delete one blood pressure measurement by calendar date and version ID from get_blood_pressure_range. " +
+			"Use when correcting logged BP — irreversible.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

@@ -58,6 +58,17 @@ This project uses a **declarative endpoint registry**. One definition generates 
 
 Param types: `ParamTypeString`, `ParamTypeInt`, `ParamTypeDate`, `ParamTypeDateRange`, `ParamTypeBool`.
 
+#### LLM-friendly `Long` descriptions (MCP)
+
+MCP exposes `Endpoint.Long` as the tool description (`mcp.WithDescription`). Write it for models routing user questions to the right tool:
+
+1. **What it returns** — name concrete fields or payload shape in one short phrase.
+2. **`Use for …`** — include natural-language phrases users actually say (quoted or paraphrased).
+3. **Disambiguation** — when similar tools exist, add **Prefer X** / **Not Y** with the other tool’s `MCPTool` name.
+4. **Date semantics** — for overnight or sleep-adjacent metrics, say whether `date` is the **calendar day** (often wake-up day). Put the same hint on the `date` param `Description` when it helps.
+
+Keep `Long` under ~350 characters when practical. `Short` should be intent-oriented (not bare “Get foo”).
+
 ### Code style
 
 - Optional JSON fields: pointers (`*int`, `*float64`, `*string`)

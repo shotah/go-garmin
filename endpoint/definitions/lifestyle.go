@@ -36,13 +36,14 @@ var LifestyleEndpoints = []endpoint.Endpoint{
 		Path:       "/lifestylelogging-service/dailyLog/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date for lifestyle log (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for lifestyle log (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "lifestyle",
 		CLISubcommand: "daily",
 		MCPTool:       "get_daily_lifestyle_log",
-		Short:         "Get daily lifestyle log",
-		Long:          "Get lifestyle logging entries and completion stats for a date",
+		Short:         "Habit / lifestyle log for a day",
+		Long: "Lifestyle logging entries and completion stats for one calendar day (custom behaviours, tracked habits). " +
+			"Use for 'did I meditate', habit tracking — not steps or workouts.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -61,8 +62,9 @@ var LifestyleEndpoints = []endpoint.Endpoint{
 		CLICommand:    "lifestyle",
 		CLISubcommand: "create-behaviour",
 		MCPTool:       "create_lifestyle_behaviour",
-		Short:         "Create lifestyle behaviour",
-		Long:          "Create a custom lifestyle behaviour tag. Use --file, --json, or stdin. Live API uses POST.",
+		Short:         "Create a habit tag",
+		Long: "Create a custom lifestyle behaviour tag on Connect via JSON body. " +
+			"Use for new habit names before logging. --file, --json, or stdin; live API uses POST.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

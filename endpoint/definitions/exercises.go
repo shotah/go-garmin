@@ -21,8 +21,9 @@ var ExerciseEndpoints = []endpoint.Endpoint{
 		CLICommand:    "exercises",
 		CLISubcommand: "categories",
 		MCPTool:       "list_exercise_categories",
-		Short:         "List exercise categories",
-		Long:          "List all available exercise categories (e.g., BENCH_PRESS, CURL, DEADLIFT)",
+		Short:         "Strength exercise categories",
+		Long: "Static catalog of exercise category codes (BENCH_PRESS, DEADLIFT, etc.). " +
+			"Use to filter list_exercises when building workouts — no auth required.",
 		Handler: func(_ context.Context, _ any, _ *endpoint.HandlerArgs) (any, error) {
 			return exercises.Get().Categories(), nil
 		},
@@ -36,8 +37,8 @@ var ExerciseEndpoints = []endpoint.Endpoint{
 		CLICommand:    "exercises",
 		CLISubcommand: "muscles",
 		MCPTool:       "list_muscle_groups",
-		Short:         "List muscle groups",
-		Long:          "List all available muscle groups (e.g., CHEST, BICEPS, QUADS)",
+		Short:         "Muscle group codes",
+		Long:          "Static muscle group codes (CHEST, BICEPS, etc.) for filtering list_exercises. No auth required.",
 		Handler: func(_ context.Context, _ any, _ *endpoint.HandlerArgs) (any, error) {
 			return exercises.Get().Muscles(), nil
 		},
@@ -51,8 +52,8 @@ var ExerciseEndpoints = []endpoint.Endpoint{
 		CLICommand:    "exercises",
 		CLISubcommand: "equipment",
 		MCPTool:       "list_equipment_types",
-		Short:         "List equipment types",
-		Long:          "List all available equipment types (e.g., DUMBBELL, BARBELL, MACHINE)",
+		Short:         "Equipment type codes",
+		Long:          "Static equipment codes (DUMBBELL, BARBELL, etc.) for filtering list_exercises. No auth required.",
 		Handler: func(_ context.Context, _ any, _ *endpoint.HandlerArgs) (any, error) {
 			return exercises.Get().Equipment(), nil
 		},
@@ -72,8 +73,9 @@ var ExerciseEndpoints = []endpoint.Endpoint{
 		CLICommand:    "exercises",
 		CLISubcommand: "list",
 		MCPTool:       "list_exercises",
-		Short:         "List/search exercises",
-		Long:          "List exercises with optional filters. All filters are combined with AND logic.",
+		Short:         "Search exercise library",
+		Long: "Filter/search Garmin exercise library by category, muscle, equipment, or name (AND filters). " +
+			"Use for workout JSON exercise keys. Detail: get_exercise.",
 		Handler: func(_ context.Context, _ any, args *endpoint.HandlerArgs) (any, error) {
 			category := args.String("category")
 			muscle := args.String("muscle")
@@ -94,8 +96,9 @@ var ExerciseEndpoints = []endpoint.Endpoint{
 		CLICommand:    "exercises",
 		CLISubcommand: "get",
 		MCPTool:       "get_exercise",
-		Short:         "Get exercise by key",
-		Long:          "Get exercise details by key. May return multiple exercises if the key exists in multiple categories.",
+		Short:         "Exercise detail by key",
+		Long: "Exercise metadata for a library key (e.g. BARBELL_BENCH_PRESS); may return multiple if key spans categories. " +
+			"Use after list_exercises. Logged sets in activities: get_activity_exercise_sets.",
 		Handler: func(_ context.Context, _ any, args *endpoint.HandlerArgs) (any, error) {
 			key := args.String("key")
 			if key == "" {

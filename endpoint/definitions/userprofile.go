@@ -19,8 +19,9 @@ var UserProfileEndpoints = []endpoint.Endpoint{
 		CLICommand:    "profile",
 		CLISubcommand: "social",
 		MCPTool:       "get_social_profile",
-		Short:         "Get social profile",
-		Long:          "Get the user's social profile including display name, bio, and visibility settings",
+		Short:         "Display name & social profile",
+		Long: "Social profile: display_name (needed for some APIs), bio, visibility. " +
+			"Use for 'my Garmin display name' or before tools requiring display_name.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -38,8 +39,9 @@ var UserProfileEndpoints = []endpoint.Endpoint{
 		CLICommand:    "profile",
 		CLISubcommand: "settings",
 		MCPTool:       "get_user_settings",
-		Short:         "Get user settings",
-		Long:          "Get the user's settings including personal data, sleep settings, and preferences",
+		Short:         "Account & health settings",
+		Long: "User settings: personal data, sleep preferences, units-related options. " +
+			"Use for 'my profile settings', height/weight prefs — not daily metrics.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -57,8 +59,9 @@ var UserProfileEndpoints = []endpoint.Endpoint{
 		CLICommand:    "profile",
 		CLISubcommand: "display",
 		MCPTool:       "get_profile_settings",
-		Short:         "Get profile display settings",
-		Long:          "Get the user's profile display settings including locale, units, and format preferences",
+		Short:         "Locale, units, formats",
+		Long: "Profile display settings: locale, date/time formats, measurement units. " +
+			"Use for 'what units am I using', display preferences.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

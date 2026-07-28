@@ -18,13 +18,14 @@ var PeriodicHealthEndpoints = []endpoint.Endpoint{
 		Path:       "/periodichealth-service/menstrualcycle/dayview/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date for day view (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for cycle day view (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "health",
 		CLISubcommand: "day",
 		MCPTool:       "get_menstrual_day_view",
-		Short:         "Get menstrual day view",
-		Long:          "Get menstrual/pregnancy day view including cycle summary and logged symptoms for a date",
+		Short:         "Cycle / symptoms for one day",
+		Long: "Menstrual or pregnancy day view: cycle phase summary and logged symptoms for one calendar day. " +
+			"Use for 'period today', symptoms. Multi-day calendar: get_menstrual_calendar.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -45,8 +46,9 @@ var PeriodicHealthEndpoints = []endpoint.Endpoint{
 		CLICommand:    "health",
 		CLISubcommand: "calendar",
 		MCPTool:       "get_menstrual_calendar",
-		Short:         "Get menstrual calendar",
-		Long:          "Get menstrual calendar data including cycle summaries and logged symptom/ovulation/note days",
+		Short:         "Cycle calendar over range",
+		Long: "Menstrual calendar over a date range (default last 7 days): cycle days, symptoms, ovulation, notes. " +
+			"Use for 'cycle this month'. Single day: get_menstrual_day_view.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -72,8 +74,9 @@ var PeriodicHealthEndpoints = []endpoint.Endpoint{
 		CLICommand:    "health",
 		CLISubcommand: "pregnancy",
 		MCPTool:       "get_pregnancy_snapshot",
-		Short:         "Get pregnancy snapshot",
-		Long:          "Get the pregnancy snapshot summary for the current user",
+		Short:         "Pregnancy tracking summary",
+		Long: "Current pregnancy snapshot summary from Connect (due date context, tracking status). " +
+			"Use for 'pregnancy tracking', pregnancy overview.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

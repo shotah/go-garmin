@@ -79,8 +79,9 @@ var FitnessStatsEndpoints = []endpoint.Endpoint{
 		CLICommand:    "fitnessstats",
 		CLISubcommand: "get",
 		MCPTool:       "get_fitness_stats",
-		Short:         "Get fitness statistics",
-		Long:          "Get aggregated fitness statistics for activities including calories, distance, and duration over a date range",
+		Short:         "Aggregated activity stats",
+		Long: "Aggregated activity metrics (calories, distance, duration, HR, etc.) over a range with daily/weekly/monthly/yearly rollups. " +
+			"Use for 'training volume this month'. Per-activity rows: get_fitness_stats_activities; recent list: list_activities.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -150,8 +151,9 @@ var FitnessStatsEndpoints = []endpoint.Endpoint{
 		CLICommand:    "fitnessstats",
 		CLISubcommand: "activities",
 		MCPTool:       "get_fitness_stats_activities",
-		Short:         "Get individual activity data",
-		Long:          "Get individual activity data without aggregation, including activity names, types, and training effects",
+		Short:         "Per-activity stats export",
+		Long: "Individual activities in a date range with chosen metrics (name, start, type, training effect, etc.) — no aggregation. " +
+			"Use for spreadsheets/analysis. Summaries: get_fitness_stats.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

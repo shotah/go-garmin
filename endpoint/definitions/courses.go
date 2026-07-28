@@ -22,8 +22,9 @@ var CourseEndpoints = []endpoint.Endpoint{
 		CLICommand:    "courses",
 		CLISubcommand: "list",
 		MCPTool:       "list_courses",
-		Short:         "List owner courses",
-		Long:          "List all courses/routes owned by the authenticated user, including distance, elevation, and activity type",
+		Short:         "My saved courses/routes",
+		Long: "Courses and routes you own on Connect: distance, elevation, activity type, course_id. " +
+			"Use for 'my courses', planning a route. Detail/GPX: get_course.",
 
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
@@ -45,15 +46,16 @@ var CourseEndpoints = []endpoint.Endpoint{
 				Name:        "course_id",
 				Type:        endpoint.ParamTypeInt,
 				Required:    true,
-				Description: "Course ID to get details for",
+				Description: "Course ID from list_courses",
 			},
 		},
 
 		CLICommand:    "courses",
 		CLISubcommand: "get",
 		MCPTool:       "get_course",
-		Short:         "Get course details",
-		Long:          "Get detailed information about a specific course/route including distance, elevation, coordinates, and activity type",
+		Short:         "Course detail + track",
+		Long: "Full course/route metadata: distance, elevation, coordinates, activity type. " +
+			"Use for 'course details', map path. List IDs: list_courses.",
 
 		DependsOn: "ListOwnerCourses",
 		ArgProvider: func(result any) map[string]any {
@@ -211,15 +213,16 @@ var CourseEndpoints = []endpoint.Endpoint{
 				Name:        "course_id",
 				Type:        endpoint.ParamTypeInt,
 				Required:    true,
-				Description: "Course ID to delete",
+				Description: "Course ID from list_courses to delete permanently",
 			},
 		},
 
 		CLICommand:    "courses",
 		CLISubcommand: "delete",
 		MCPTool:       "delete_course",
-		Short:         "Delete a course",
-		Long:          "Permanently delete a course/route from your Garmin Connect account",
+		Short:         "Remove a saved course",
+		Long: "Permanently delete a course/route from Connect by course_id. " +
+			"Use only when the user asks to delete a route — irreversible.",
 
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)

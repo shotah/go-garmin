@@ -19,13 +19,14 @@ var FitnessAgeEndpoints = []endpoint.Endpoint{
 		Path:       "/fitnessage-service/fitnessage/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get fitness age for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for fitness age (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "fitnessage",
 		CLISubcommand: "daily",
 		MCPTool:       "get_fitness_age",
-		Short:         "Get fitness age for a date",
-		Long:          "Get single-day fitness age details including chronological age, fitness age, achievable fitness age, and contributing components",
+		Short:         "Fitness age vs real age",
+		Long: "Fitness Age for one day: chronological age, fitness age, achievable target, contributors. " +
+			"Use for 'fitness age', 'am I younger than my age'. Trends: get_fitness_age_stats.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -46,8 +47,9 @@ var FitnessAgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "fitnessage",
 		CLISubcommand: "stats",
 		MCPTool:       "get_fitness_age_stats",
-		Short:         "Get fitness age statistics",
-		Long:          "Get daily fitness age statistics including fitness age, achievable fitness age, RHR, BMI, and vigorous activity days. Note: date range must be 28 days or less.",
+		Short:         "Fitness age over time",
+		Long: "Daily fitness age, achievable age, RHR, BMI, vigorous-activity days over a range (default 7 days, max 28). " +
+			"Use for 'fitness age trend'. Single day: get_fitness_age.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

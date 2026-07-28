@@ -35,14 +35,15 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		Path:       "/usersummary-service/usersummary/daily/{displayName}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date for summary (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for the home-screen summary (YYYY-MM-DD, defaults to today)"},
 			{Name: "display_name", Type: endpoint.ParamTypeString, Required: false, Description: "User display name (defaults to current user)"},
 		},
 		CLICommand:    "summary",
 		CLISubcommand: "daily",
 		MCPTool:       "get_daily_user_summary",
-		Short:         "Get daily user summary",
-		Long:          "Get Connect home-screen daily totals: steps, calories, distance, floors, intensity, stress, and body battery",
+		Short:         "Home-screen daily totals",
+		Long: "Connect home-screen daily totals: steps, calories, distance, floors, intensity, stress, Body Battery snapshot. " +
+			"Use for 'how active was I today', steps/calories overview. Prefer get_sleep for overnight sleep and get_weight for scale readings.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -62,13 +63,14 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		Path:       "/usersummary-service/usersummary/hydration/daily/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date for hydration data (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for hydration (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "summary",
 		CLISubcommand: "hydration",
 		MCPTool:       "get_daily_hydration",
-		Short:         "Get daily hydration",
-		Long:          "Get hydration intake and goal for a single day",
+		Short:         "Today's hydration vs goal",
+		Long: "Hydration intake and daily goal for one calendar day. " +
+			"Use for 'how much water did I drink', hydration goal. Multi-day trends: get_hydration_stats.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -87,8 +89,9 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		CLICommand:    "summary",
 		CLISubcommand: "log-hydration",
 		MCPTool:       "log_hydration",
-		Short:         "Log hydration intake",
-		Long:          "Log or adjust hydration intake (positive adds ml, negative subtracts). Use --file, --json, or stdin. Live API uses PUT.",
+		Short:         "Log water intake",
+		Long: "Add or adjust hydration (ml) on Connect for a calendar day via JSON body. " +
+			"Use for 'log water', 'add 250ml'. Use --file, --json, or stdin; live API uses PUT.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -113,8 +116,9 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		CLICommand:    "summary",
 		CLISubcommand: "steps-daily",
 		MCPTool:       "get_steps_daily_stats",
-		Short:         "Get daily steps stats",
-		Long:          "Get daily steps and distance for a date range. API limit is 28 days per call; longer ranges are automatically chunked",
+		Short:         "Multi-day steps + distance",
+		Long: "Daily steps and distance for a date range (default last 7 days; >28 days chunked). " +
+			"Use for 'steps this week', walking trends. Today's snapshot: get_daily_user_summary.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -138,14 +142,15 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		Path:       "/usersummary-service/stats/steps/weekly/{end}/{weeks}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "end", Type: endpoint.ParamTypeDate, Required: false, Description: "End date for weekly stats (YYYY-MM-DD, defaults to today)"},
+			{Name: "end", Type: endpoint.ParamTypeDate, Required: false, Description: "Last day of weekly window (YYYY-MM-DD, defaults to today)"},
 			{Name: "weeks", Type: endpoint.ParamTypeInt, Required: false, Description: "Number of weeks (default 4)"},
 		},
 		CLICommand:    "summary",
 		CLISubcommand: "steps-weekly",
 		MCPTool:       "get_steps_weekly_stats",
-		Short:         "Get weekly steps stats",
-		Long:          "Get weekly aggregated steps and distance ending on the given date",
+		Short:         "Weekly steps aggregates",
+		Long: "Weekly rolled-up steps and distance ending on the given date (default 4 weeks). " +
+			"Use for 'steps per week'. Per-day detail: get_steps_daily_stats.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -166,8 +171,9 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		CLICommand:    "summary",
 		CLISubcommand: "stress-daily",
 		MCPTool:       "get_stress_daily_stats",
-		Short:         "Get daily stress stats",
-		Long:          "Get daily stress summary values for a date range",
+		Short:         "Multi-day stress summaries",
+		Long: "Daily stress summary values over a date range (default last 7 days). " +
+			"Use for 'stress this week'. Intraday chart for one day: get_stress.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -191,14 +197,15 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		Path:       "/usersummary-service/stats/stress/weekly/{end}/{weeks}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "end", Type: endpoint.ParamTypeDate, Required: false, Description: "End date for weekly stress stats (YYYY-MM-DD, defaults to today)"},
+			{Name: "end", Type: endpoint.ParamTypeDate, Required: false, Description: "Last day of weekly window (YYYY-MM-DD, defaults to today)"},
 			{Name: "weeks", Type: endpoint.ParamTypeInt, Required: false, Description: "Number of weeks (default 4)"},
 		},
 		CLICommand:    "summary",
 		CLISubcommand: "stress-weekly",
 		MCPTool:       "get_stress_weekly_stats",
-		Short:         "Get weekly stress stats",
-		Long:          "Get weekly aggregated stress values ending on the given date",
+		Short:         "Weekly stress aggregates",
+		Long: "Weekly aggregated stress ending on the given date (default 4 weeks). " +
+			"Use for stress trends by week. Single-day detail: get_stress.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -219,8 +226,9 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		CLICommand:    "summary",
 		CLISubcommand: "hydration-stats",
 		MCPTool:       "get_hydration_stats",
-		Short:         "Get hydration stats",
-		Long:          "Get daily hydration intake stats for a date range",
+		Short:         "Multi-day hydration intake",
+		Long: "Daily hydration intake stats over a date range (default last 7 days). " +
+			"Use for 'water intake this week'. Single day + goal: get_daily_hydration.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -249,8 +257,9 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		CLICommand:    "summary",
 		CLISubcommand: "im-daily",
 		MCPTool:       "get_intensity_minutes_daily_stats",
-		Short:         "Get daily intensity minutes stats",
-		Long:          "Get daily moderate and vigorous intensity minutes for a date range",
+		Short:         "Multi-day intensity minutes",
+		Long: "Daily moderate and vigorous intensity minutes over a date range (default last 7 days). " +
+			"Use for weekly goal progress history. Current week status: get_intensity_minutes.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -279,8 +288,9 @@ var UserSummaryEndpoints = []endpoint.Endpoint{
 		CLICommand:    "summary",
 		CLISubcommand: "im-weekly",
 		MCPTool:       "get_intensity_minutes_weekly_stats",
-		Short:         "Get weekly intensity minutes stats",
-		Long:          "Get weekly moderate and vigorous intensity minutes aggregates for a date range",
+		Short:         "Weekly intensity minutes rollups",
+		Long: "Weekly moderate/vigorous intensity minute aggregates over a date range (default last 28 days). " +
+			"Use for 'intensity minutes by week'. Today's week progress: get_intensity_minutes.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

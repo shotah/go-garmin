@@ -19,8 +19,9 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "earned",
 		MCPTool:       "get_earned_badges",
-		Short:         "Get earned badges",
-		Long:          "Get badges the current user has earned",
+		Short:         "Badges you've earned",
+		Long: "Badges already earned on Connect (activity, milestone, etc.). " +
+			"Use for 'my badges', achievements. Not yet earned: get_available_badges.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -38,8 +39,9 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "available",
 		MCPTool:       "get_available_badges",
-		Short:         "Get available badges",
-		Long:          "Get badges available to the current user (including exclusive badges)",
+		Short:         "Badges you can still earn",
+		Long: "Badges available to earn (including exclusive). " +
+			"Use for 'badges left to get'. Already earned: get_earned_badges.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -61,8 +63,8 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "challenges-completed",
 		MCPTool:       "get_completed_badge_challenges",
-		Short:         "Get completed badge challenges",
-		Long:          "Get completed badge challenges with pagination",
+		Short:         "Finished badge challenges",
+		Long:          "Completed badge challenges (paginated). Use for 'challenges I finished'. Open ones: get_non_completed_badge_challenges.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -84,8 +86,8 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "challenges-available",
 		MCPTool:       "get_available_badge_challenges",
-		Short:         "Get available badge challenges",
-		Long:          "Get available badge challenges with pagination",
+		Short:         "Joinable badge challenges",
+		Long:          "Badge challenges you can join (paginated). Use for 'new challenges'. In progress: get_non_completed_badge_challenges.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -107,8 +109,8 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "challenges-open",
 		MCPTool:       "get_non_completed_badge_challenges",
-		Short:         "Get open badge challenges",
-		Long:          "Get non-completed (open) badge challenges with pagination",
+		Short:         "Active badge challenges",
+		Long:          "Open (not completed) badge challenges in progress (paginated). Use for 'challenges I'm doing'. Done: get_completed_badge_challenges.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -130,8 +132,9 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "virtual",
 		MCPTool:       "get_virtual_challenges_in_progress",
-		Short:         "Get virtual challenges in progress",
-		Long:          "Get in-progress virtual challenges with pagination",
+		Short:         "Virtual challenges in progress",
+		Long: "In-progress virtual challenges (paginated): progress toward distance/goal targets. " +
+			"Use for 'virtual challenge status'.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -153,8 +156,8 @@ var BadgeEndpoints = []endpoint.Endpoint{
 		CLICommand:    "badges",
 		CLISubcommand: "adhoc",
 		MCPTool:       "get_adhoc_historical_challenges",
-		Short:         "Get historical ad-hoc challenges",
-		Long:          "Get historical ad-hoc challenges with pagination",
+		Short:         "Past ad-hoc challenges",
+		Long:          "Historical ad-hoc challenges (paginated). Use for past one-off Connect challenges.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

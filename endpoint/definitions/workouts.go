@@ -144,8 +144,9 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		CLICommand:    "workouts",
 		CLISubcommand: "list",
 		MCPTool:       "list_workouts",
-		Short:         "List workouts",
-		Long:          "List workouts with pagination including name, sport type, and estimated duration",
+		Short:         "Saved workout library",
+		Long: "Paginated custom workouts on Connect: name, sport, duration, workout_id. " +
+			"Use for 'my workouts', structured sessions — not completed activities (list_activities).",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -166,14 +167,15 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/workout/{workoutId}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The workout ID"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "get",
 		MCPTool:       "get_workout",
-		Short:         "Get workout details",
-		Long:          "Get detailed information about a specific workout including segments and steps",
-		DependsOn:     "ListWorkouts",
+		Short:         "Workout steps & segments",
+		Long: "Full workout definition: segments, steps, targets by workout_id. " +
+			"Use for 'what's in my interval workout'. Schedule to calendar: schedule_workout.",
+		DependsOn: "ListWorkouts",
 		ArgProvider: func(result any) map[string]any {
 			list, ok := result.(*garmin.WorkoutList)
 			if !ok || len(list.Workouts) == 0 {
@@ -196,14 +198,15 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/schedule/{workoutId}",
 		HTTPMethod: "POST",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The workout ID to schedule"},
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: true, Description: "Date to schedule the workout (YYYY-MM-DD)"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts to schedule"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: true, Description: "Calendar day to schedule on (YYYY-MM-DD)"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "schedule",
 		MCPTool:       "schedule_workout",
-		Short:         "Schedule a workout",
-		Long:          "Schedule a workout for a specific date",
+		Short:         "Put workout on calendar",
+		Long: "Schedule a saved workout to a calendar day; returns schedule_id for unschedule_workout. " +
+			"Use for 'add workout to Friday'.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -219,13 +222,14 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/schedule/{scheduleId}",
 		HTTPMethod: "DELETE",
 		Params: []endpoint.Param{
-			{Name: "schedule_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The schedule ID to remove"},
+			{Name: "schedule_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Schedule ID returned by schedule_workout"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "unschedule",
 		MCPTool:       "unschedule_workout",
-		Short:         "Unschedule a workout",
-		Long:          "Remove a scheduled workout by its schedule ID",
+		Short:         "Remove scheduled workout",
+		Long: "Remove a workout from the calendar by schedule_id from schedule_workout. " +
+			"Use to cancel a planned session — does not delete the workout template.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -248,8 +252,9 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		CLICommand:    "workouts",
 		CLISubcommand: "create",
 		MCPTool:       "create_workout",
-		Short:         "Create a new workout",
-		Long:          "Create a new workout with segments and steps. Use --file to read from a file, --json to pass inline JSON, or pipe JSON to stdin.",
+		Short:         "Create workout template",
+		Long: "Create a new workout (segments/steps) on Connect via JSON body. " +
+			"Use for building interval sessions. --file, --json, or stdin.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -269,14 +274,15 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/workout/{workoutId}",
 		HTTPMethod: "PUT",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The workout ID to update"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts to update"},
 		},
 		Body:          workoutBodyConfig,
 		CLICommand:    "workouts",
 		CLISubcommand: "update",
 		MCPTool:       "update_workout",
-		Short:         "Update an existing workout",
-		Long:          "Update an existing workout. Use --file to read from a file, --json to pass inline JSON, or pipe JSON to stdin.",
+		Short:         "Edit workout template",
+		Long: "Replace an existing workout definition via JSON body. " +
+			"Use to change steps/segments. --file, --json, or stdin.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -296,13 +302,14 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/workout/{workoutId}",
 		HTTPMethod: "DELETE",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The workout ID to delete"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts to delete permanently"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "delete",
 		MCPTool:       "delete_workout",
-		Short:         "Delete a workout",
-		Long:          "Permanently delete a workout from your Garmin account",
+		Short:         "Delete workout template",
+		Long: "Permanently delete a saved workout from Connect by workout_id. " +
+			"Use only when removing a template — does not delete completed activities.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

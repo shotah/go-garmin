@@ -17,13 +17,15 @@ var HRVEndpoints = []endpoint.Endpoint{
 		Path:       "/hrv-service/hrv",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get HRV data for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for HRV status (YYYY-MM-DD, defaults to today; overnight HRV is attributed to the wake-up day)"},
 		},
 		CLICommand:    "hrv",
 		CLISubcommand: "daily",
 		MCPTool:       "get_hrv",
-		Short:         "Get HRV data for a date",
-		Long:          "Get heart rate variability data for a date including weekly average, last night average, and baseline",
+		Short:         "HRV status / overnight average",
+		Long: "Heart-rate variability for a day: overnight average, weekly average, and baseline range. " +
+			"Use for 'HRV', 'recovery', 'nervous system readiness'. Pair with get_sleep / get_training_readiness for coaching. " +
+			"Not a sleep score — use get_sleep for sleep quality.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -43,8 +45,8 @@ var HRVEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "hrv",
 		CLISubcommand: "range",
-		Short:         "Get HRV data for a date range",
-		Long:          "Get heart rate variability summaries for a date range",
+		Short:         "HRV trend over a date range",
+		Long:          "HRV daily summaries over a date range. Use for multi-day HRV trends. For today's/overnight HRV prefer get_hrv.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

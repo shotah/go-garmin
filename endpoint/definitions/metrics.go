@@ -18,13 +18,15 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/trainingreadiness/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get training readiness for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for readiness (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "readiness",
 		MCPTool:       "get_training_readiness",
-		Short:         "Get training readiness",
-		Long:          "Get training readiness data including score, sleep, recovery time, and HRV factors",
+		Short:         "Training readiness / recover-or-push",
+		Long: "Garmin Training Readiness score plus contributing factors (sleep, recovery time, HRV, acute load, etc.). " +
+			"Use for 'am I recovered enough to train', 'readiness', 'should I rest or push'. " +
+			"For overnight sleep detail use get_sleep; for Body Battery events use get_body_battery.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -40,13 +42,14 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/endurancescore",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get endurance score for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for endurance score (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "endurance",
 		MCPTool:       "get_endurance_score",
-		Short:         "Get endurance score",
-		Long:          "Get endurance score data including overall score, classification, and contributors",
+		Short:         "Endurance score + classification",
+		Long: "Endurance Score for one day: overall score, classification, and contributors. " +
+			"Use for 'endurance score', long-activity fitness. Not VO2 max snapshot — use get_vo2max.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -62,13 +65,14 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/hillscore",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get hill score for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for hill score (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "hill",
 		MCPTool:       "get_hill_score",
-		Short:         "Get hill score",
-		Long:          "Get hill score data including strength, endurance, and VO2 max",
+		Short:         "Hill score (strength/endurance)",
+		Long: "Hill Score for one day: strength, endurance, and related metrics. " +
+			"Use for 'hill score', climbing fitness. For trends over time use get_hill_score_stats.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -90,8 +94,9 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		CLICommand:    "metrics",
 		CLISubcommand: "hill-stats",
 		MCPTool:       "get_hill_score_stats",
-		Short:         "Get hill score stats",
-		Long:          "Get hill score statistics over a date range with optional aggregation",
+		Short:         "Hill score trends over range",
+		Long: "Hill Score statistics over a date range (default last 7 days) with daily/weekly/monthly/yearly aggregation. " +
+			"Use for 'hill score history'. For today's score use get_hill_score.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -136,8 +141,9 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		CLICommand:    "metrics",
 		CLISubcommand: "race-predictions-daily",
 		MCPTool:       "get_race_predictions_daily",
-		Short:         "Get daily race predictions",
-		Long:          "Get daily race prediction snapshots for a date range",
+		Short:         "Daily race-prediction history",
+		Long: "Daily snapshots of predicted 5K/10K/half/marathon times over a date range (default last 7 days). " +
+			"Use for 'how my race predictions changed'. For latest only use get_race_predictions.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -171,8 +177,9 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		CLICommand:    "metrics",
 		CLISubcommand: "race-predictions-monthly",
 		MCPTool:       "get_race_predictions_monthly",
-		Short:         "Get monthly race predictions",
-		Long:          "Get monthly race prediction snapshots for a date range",
+		Short:         "Monthly race-prediction history",
+		Long: "Monthly snapshots of predicted race times over a date range (default last 7 days). " +
+			"Use for long-term prediction trends. For current predictions use get_race_predictions.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -200,13 +207,14 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/maxmet/latest/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get VO2 max for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for VO2 max snapshot (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "vo2max",
 		MCPTool:       "get_vo2max",
-		Short:         "Get latest VO2 max",
-		Long:          "Get the latest VO2 max / MET data including generic and cycling values",
+		Short:         "Latest VO2 max / fitness",
+		Long: "Latest VO2 max / MET values (generic and cycling when present). Use for 'VO2 max', 'cardio fitness'. " +
+			"Not training readiness (get_training_readiness) and not race predictions (get_race_predictions).",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -245,13 +253,14 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/trainingstatus/aggregated/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get training status for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for training status (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "training-status",
 		MCPTool:       "get_training_status",
-		Short:         "Get aggregated training status",
-		Long:          "Get aggregated training status including VO2 max, load balance, and heat/altitude acclimation",
+		Short:         "Training status / load overview",
+		Long: "Aggregated training status: load balance, VO2 context, heat/altitude acclimation. " +
+			"Use for 'training status', 'am I overreaching', load overview. For recover-or-push today prefer get_training_readiness.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -288,13 +297,14 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/trainingloadbalance/latest/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get training load balance for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for load balance (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "load-balance",
 		MCPTool:       "get_training_load_balance",
-		Short:         "Get training load balance",
-		Long:          "Get training load balance data including aerobic and anaerobic load targets",
+		Short:         "Aerobic/anaerobic load balance",
+		Long: "Latest training load balance: aerobic vs anaerobic load vs targets. " +
+			"Use for 'load balance', training mix. Broader status overview: get_training_status.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -310,13 +320,14 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		Path:       "/metrics-service/metrics/heataltitudeacclimation/latest/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get heat/altitude acclimation for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for acclimation snapshot (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "metrics",
 		CLISubcommand: "acclimation",
 		MCPTool:       "get_heat_altitude_acclimation",
-		Short:         "Get heat/altitude acclimation",
-		Long:          "Get heat and altitude acclimation data including percentages and trends",
+		Short:         "Heat & altitude acclimation",
+		Long: "Heat and altitude acclimation percentages and trends as of one day. " +
+			"Use for 'heat acclimation', 'altitude acclimation'. Also summarized in get_training_status.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -337,9 +348,10 @@ var MetricsEndpoints = []endpoint.Endpoint{
 		CLICommand:    "metrics",
 		CLISubcommand: "race-predictions",
 		MCPTool:       "get_race_predictions",
-		Short:         "Get race predictions",
-		Long:          "Get predicted race times for 5K, 10K, half marathon, and marathon based on current fitness",
-		DependsOn:     "GetSocialProfile",
+		Short:         "Current race time predictions",
+		Long: "Latest predicted times for 5K, 10K, half marathon, and marathon from current fitness. " +
+			"Use for 'what pace can I race', 'marathon prediction'. Not VO2 max — use get_vo2max.",
+		DependsOn: "GetSocialProfile",
 		ArgProvider: func(result any) map[string]any {
 			profile, ok := result.(*garmin.SocialProfile)
 			if !ok || profile == nil {

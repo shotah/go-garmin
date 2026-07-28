@@ -17,13 +17,14 @@ var WeightEndpoints = []endpoint.Endpoint{
 		Path:       "/weight-service/weight/dayview",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get weight data for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Weigh-in calendar day (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "weight",
 		CLISubcommand: "daily",
 		MCPTool:       "get_weight",
-		Short:         "Get weight data for a date",
-		Long:          "Get weight data for a date including BMI, body fat, muscle mass, and other body composition metrics",
+		Short:         "Scale weight + body composition",
+		Long: "Index/scale weigh-in for a day: weight, BMI, body fat %, muscle mass, bone mass, body water. " +
+			"Use for 'what's my weight', 'body composition', 'scale reading'. Not for steps, sleep, or activities.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -43,8 +44,8 @@ var WeightEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "weight",
 		CLISubcommand: "range",
-		Short:         "Get weight data for a date range",
-		Long:          "Get weight data summaries for a date range including averages",
+		Short:         "Weight trend over a date range",
+		Long:          "Weight summaries/averages over a date range. Use for 'weight this week/month'. For a single weigh-in prefer get_weight.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

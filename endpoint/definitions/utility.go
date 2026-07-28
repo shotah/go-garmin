@@ -16,8 +16,10 @@ var UtilityEndpoints = []endpoint.Endpoint{
 		Path:       "local://current-date",
 		HTTPMethod: "GET",
 		MCPTool:    "get_current_date",
-		Short:      "Get current date",
-		Long:       "Get the current date including year, month, day, and weekday. Useful for determining what date to use for other API calls.",
+		Short:      "Today's local calendar date",
+		Long: "Returns today's local date (YYYY-MM-DD), weekday, and ISO timestamp. " +
+			"Use when you need an explicit date before calling dated Garmin tools; " +
+			"most tools already default date=today so you can often skip this.",
 		Handler: func(_ context.Context, _ any, _ *endpoint.HandlerArgs) (any, error) {
 			now := time.Now()
 			return map[string]any{

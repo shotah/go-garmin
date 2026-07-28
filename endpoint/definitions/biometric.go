@@ -19,8 +19,9 @@ var BiometricEndpoints = []endpoint.Endpoint{
 		CLICommand:    "biometric",
 		CLISubcommand: "lactate-threshold",
 		MCPTool:       "get_lactate_threshold",
-		Short:         "Get latest lactate threshold",
-		Long:          "Get the latest lactate threshold data including speed and heart rate",
+		Short:         "Latest lactate threshold",
+		Long: "Latest lactate threshold speed and heart rate from Connect. " +
+			"Use for 'LT pace', threshold training. Zone config: get_heart_rate_zones.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -38,8 +39,9 @@ var BiometricEndpoints = []endpoint.Endpoint{
 		CLICommand:    "biometric",
 		CLISubcommand: "ftp",
 		MCPTool:       "get_cycling_ftp",
-		Short:         "Get cycling FTP",
-		Long:          "Get the latest cycling Functional Threshold Power (FTP) in watts",
+		Short:         "Latest cycling FTP (watts)",
+		Long: "Latest cycling Functional Threshold Power in watts. " +
+			"Use for 'FTP', cycling power zones context. Per-ride zones: get_activity_power_zones.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -55,13 +57,14 @@ var BiometricEndpoints = []endpoint.Endpoint{
 		Path:       "/biometric-service/biometric/powerToWeight/latest/{date}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Date to get power-to-weight for (YYYY-MM-DD, defaults to today)"},
+			{Name: "date", Type: endpoint.ParamTypeDate, Required: false, Description: "Calendar day for power-to-weight (YYYY-MM-DD, defaults to today)"},
 		},
 		CLICommand:    "biometric",
 		CLISubcommand: "power-weight",
 		MCPTool:       "get_power_to_weight",
-		Short:         "Get power-to-weight ratio",
-		Long:          "Get the power-to-weight ratio for running on a specific date",
+		Short:         "Running power-to-weight",
+		Long: "Running power-to-weight ratio for one calendar day. " +
+			"Use for 'w/kg', running power efficiency. Cycling FTP: get_cycling_ftp.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -79,8 +82,9 @@ var BiometricEndpoints = []endpoint.Endpoint{
 		CLICommand:    "biometric",
 		CLISubcommand: "hr-zones",
 		MCPTool:       "get_heart_rate_zones",
-		Short:         "Get heart rate zones",
-		Long:          "Get heart rate zone configurations for all sports",
+		Short:         "HR zone definitions (all sports)",
+		Long: "Heart-rate zone boundaries configured for each sport/activity type. " +
+			"Use for 'my zone 2 range'. Time in zones on a workout: get_activity_hr_zones; daily HR: get_heart_rate.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

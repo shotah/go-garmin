@@ -19,8 +19,9 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLICommand:    "activities",
 		CLISubcommand: "types",
 		MCPTool:       "get_activity_types",
-		Short:         "Get activity types",
-		Long:          "Get the list of all available activity types including running, cycling, swimming, etc.",
+		Short:         "Activity type catalog",
+		Long: "All Garmin activity type IDs and labels (run, ride, climb, etc.). " +
+			"Use when filtering list_activities or interpreting activityType fields — not for workout history.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -42,8 +43,10 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLICommand:    "activities",
 		CLISubcommand: "list",
 		MCPTool:       "list_activities",
-		Short:         "List activities",
-		Long:          "List activities with pagination. Climbing sessions include numFalls (watch falls), numClimbSends, numClimbsCompleted, and maxClimbGrade when present. Use get_activity_typed_splits for per-route grades/status.",
+		Short:         "List recent workouts/activities",
+		Long: "List recent Garmin activities (runs, rides, climbs, etc.) with pagination; returns activity_id for follow-ups. " +
+			"Use for 'what did I do', 'workouts this week', activity history. " +
+			"Climbing list items may include falls/sends; per-route grades need get_activity_typed_splits; session fall totals need get_activity_split_summaries.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -79,9 +82,10 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLICommand:    "activities",
 		CLISubcommand: "get",
 		MCPTool:       "get_activity",
-		Short:         "Get activity details",
-		Long:          "Get detailed information about a specific activity including metadata, summary, and splits",
-		DependsOn:     "ListActivities",
+		Short:         "One activity by ID (summary)",
+		Long: "Detailed summary for one activity by activity_id from list_activities: metadata, distance/time/HR, and overview splits. " +
+			"Use when the user asks about a specific workout. For climbing per-route grades use get_activity_typed_splits; for fall/send aggregates use get_activity_split_summaries.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -104,14 +108,15 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		Path:       "/activity-service/activity/{activityId}/weather",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The activity ID"},
+			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Activity ID from list_activities"},
 		},
 		CLICommand:    "activities",
 		CLISubcommand: "weather",
 		MCPTool:       "get_activity_weather",
-		Short:         "Get activity weather",
-		Long:          "Get weather data for a specific activity including temperature, humidity, and wind",
-		DependsOn:     "ListActivities",
+		Short:         "Weather during a workout",
+		Long: "Weather at activity time: temperature, humidity, wind, conditions. " +
+			"Use for 'what was the weather on my run'. Requires activity_id from list_activities.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -134,14 +139,15 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		Path:       "/activity-service/activity/{activityId}/splits",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The activity ID"},
+			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Activity ID from list_activities"},
 		},
 		CLICommand:    "activities",
 		CLISubcommand: "splits",
 		MCPTool:       "get_activity_splits",
-		Short:         "Get activity splits",
-		Long:          "Get splits/laps data for a specific activity including pace, heart rate, and elevation per lap",
-		DependsOn:     "ListActivities",
+		Short:         "Lap splits (pace/HR/elev)",
+		Long: "Lap or split table for one activity: pace, heart rate, elevation per segment. " +
+			"Use for 'splits on my run', mile times. Climbing routes: prefer get_activity_typed_splits.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -169,9 +175,10 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLICommand:    "activities",
 		CLISubcommand: "details",
 		MCPTool:       "get_activity_details",
-		Short:         "Get activity time-series details",
-		Long:          "Get extended details with time-series metrics for an activity",
-		DependsOn:     "ListActivities",
+		Short:         "Activity time-series metrics",
+		Long: "Extended time-series metrics for an activity_id (samples over the workout). " +
+			"Use when you need charts/samples beyond get_activity's summary. Prefer get_activity first for a normal workout recap.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -194,14 +201,15 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		Path:       "/activity-service/activity/{activityId}/hrTimeInZones",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The activity ID"},
+			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Activity ID from list_activities"},
 		},
 		CLICommand:    "activities",
 		CLISubcommand: "hr-zones",
 		MCPTool:       "get_activity_hr_zones",
-		Short:         "Get activity HR time in zones",
-		Long:          "Get heart rate time in zones for an activity",
-		DependsOn:     "ListActivities",
+		Short:         "HR time in zones (workout)",
+		Long: "Time spent in each heart-rate zone during one activity. " +
+			"Use for 'zone distribution on my ride'. All-day zones: get_heart_rate; zone config: get_heart_rate_zones.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -224,14 +232,15 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		Path:       "/activity-service/activity/{activityId}/powerTimeInZones",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The activity ID"},
+			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Activity ID from list_activities"},
 		},
 		CLICommand:    "activities",
 		CLISubcommand: "power-zones",
 		MCPTool:       "get_activity_power_zones",
-		Short:         "Get activity power time in zones",
-		Long:          "Get power time in zones for an activity",
-		DependsOn:     "ListActivities",
+		Short:         "Power time in zones (workout)",
+		Long: "Time in cycling power zones for one activity. " +
+			"Use for 'power zones on my ride'. FTP snapshot: get_cycling_ftp.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -254,14 +263,15 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		Path:       "/activity-service/activity/{activityId}/exerciseSets",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The activity ID"},
+			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Activity ID from list_activities"},
 		},
 		CLICommand:    "activities",
 		CLISubcommand: "exercise-sets",
 		MCPTool:       "get_activity_exercise_sets",
-		Short:         "Get activity exercise sets",
-		Long:          "Get exercise sets for a strength workout activity",
-		DependsOn:     "ListActivities",
+		Short:         "Strength sets & reps",
+		Long: "Exercise sets for a strength-training activity: exercises, reps, weight. " +
+			"Use for 'what did I lift', gym set details. Exercise library IDs: list_exercises.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -289,9 +299,11 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLICommand:    "activities",
 		CLISubcommand: "typed-splits",
 		MCPTool:       "get_activity_typed_splits",
-		Short:         "Get activity typed splits",
-		Long:          "Get typed splits for an activity. For indoor climbing / bouldering this is the per-route list: type CLIMB_ACTIVE|CLIMB_REST, status CLIMB_COMPLETED|CLIMB_ATTEMPTED, and gradeValue (VERMIN/YDS/FONT). Session fall counts are on get_activity_split_summaries (numFalls).",
-		DependsOn:     "ListActivities",
+		Short:         "Per-route climbing splits / grades",
+		Long: "Typed splits for an activity_id. For indoor climbing/bouldering: per-route CLIMB_ACTIVE|CLIMB_REST, " +
+			"status CLIMB_COMPLETED|CLIMB_ATTEMPTED, gradeValue (VERMIN/YDS/FONT). " +
+			"Use for 'what grades did I climb', sends vs attempts. Session fall totals are on get_activity_split_summaries (numFalls).",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -319,9 +331,11 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		CLICommand:    "activities",
 		CLISubcommand: "split-summaries",
 		MCPTool:       "get_activity_split_summaries",
-		Short:         "Get activity split summaries",
-		Long:          "Get split summaries aggregated by type. For climbing: CLIMB_ACTIVE includes numFalls (watch falls), numClimbSends, numClimbsCompleted, and maxGradeValue. Use get_activity_typed_splits for per-route grades/status.",
-		DependsOn:     "ListActivities",
+		Short:         "Activity split aggregates (falls/sends)",
+		Long: "Split summaries aggregated by type for an activity_id. For climbing CLIMB_ACTIVE: numFalls (watch falls), " +
+			"numClimbSends, numClimbsCompleted, maxGradeValue. Use for session fall/send totals; " +
+			"use get_activity_typed_splits for per-route grades/status.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
@@ -344,14 +358,15 @@ var ActivityEndpoints = []endpoint.Endpoint{
 		Path:       "/gear-service/gear/filterGear?activityId={activityId}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "The activity ID"},
+			{Name: "activity_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Activity ID from list_activities"},
 		},
 		CLICommand:    "activities",
 		CLISubcommand: "gear",
 		MCPTool:       "get_activity_gear",
-		Short:         "Get activity gear",
-		Long:          "Get gear linked to a specific activity such as shoes, bikes, or other equipment",
-		DependsOn:     "ListActivities",
+		Short:         "Gear used on activity",
+		Long: "Shoes, bike, or other gear linked to one activity. " +
+			"Use for 'what shoes did I wear on that run'.",
+		DependsOn: "ListActivities",
 		ArgProvider: func(result any) map[string]any {
 			items, ok := result.([]garmin.ActivityListItem)
 			if !ok || len(items) == 0 {
