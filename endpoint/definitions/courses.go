@@ -21,10 +21,10 @@ var CourseEndpoints = []endpoint.Endpoint{
 
 		CLICommand:    "courses",
 		CLISubcommand: "list",
-		MCPTool:       "list_courses",
+		MCPTool:       "courses_list",
 		Short:         "My saved courses/routes",
 		Long: "Courses and routes you own on Connect: distance, elevation, activity type, course_id. " +
-			"Use for 'my courses', planning a route. Detail/GPX: get_course.",
+			"Use for 'my courses', planning a route. Detail/GPX: courses_get.",
 
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
@@ -46,16 +46,16 @@ var CourseEndpoints = []endpoint.Endpoint{
 				Name:        "course_id",
 				Type:        endpoint.ParamTypeInt,
 				Required:    true,
-				Description: "Course ID from list_courses",
+				Description: "Course ID from courses_list",
 			},
 		},
 
 		CLICommand:    "courses",
 		CLISubcommand: "get",
-		MCPTool:       "get_course",
+		MCPTool:       "courses_get",
 		Short:         "Course detail + track",
 		Long: "Full course/route metadata: distance, elevation, coordinates, activity type. " +
-			"Use for 'course details', map path. List IDs: list_courses.",
+			"Use for 'course details', map path. List IDs: courses_list.",
 
 		DependsOn: "ListOwnerCourses",
 		ArgProvider: func(result any) map[string]any {
@@ -213,13 +213,13 @@ var CourseEndpoints = []endpoint.Endpoint{
 				Name:        "course_id",
 				Type:        endpoint.ParamTypeInt,
 				Required:    true,
-				Description: "Course ID from list_courses to delete permanently",
+				Description: "Course ID from courses_list to delete permanently",
 			},
 		},
 
 		CLICommand:    "courses",
 		CLISubcommand: "delete",
-		MCPTool:       "delete_course",
+		MCPTool:       "courses_delete",
 		Short:         "Remove a saved course",
 		Long: "Permanently delete a course/route from Connect by course_id. " +
 			"Use only when the user asks to delete a route — irreversible.",

@@ -18,10 +18,10 @@ var DeviceEndpoints = []endpoint.Endpoint{
 		HTTPMethod:    "GET",
 		CLICommand:    "devices",
 		CLISubcommand: "list",
-		MCPTool:       "list_devices",
+		MCPTool:       "devices_list",
 		Short:         "Registered watches & devices",
 		Long: "Garmin devices on your account: model, device_id, sync status, capabilities. " +
-			"Use for 'what watch do I have', picking device_id for get_device_settings.",
+			"Use for 'what watch do I have', picking device_id for devices_get_settings.",
 		Handler: func(ctx context.Context, c any, _ *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -37,11 +37,11 @@ var DeviceEndpoints = []endpoint.Endpoint{
 		Path:       "/device-service/deviceservice/device-info/settings",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "device_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Device ID from list_devices"},
+			{Name: "device_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Device ID from devices_list"},
 		},
 		CLICommand:    "devices",
 		CLISubcommand: "settings",
-		MCPTool:       "get_device_settings",
+		MCPTool:       "devices_get_settings",
 		Short:         "Watch settings & preferences",
 		Long: "Device settings for one device_id: alarms, activity tracking, display options. " +
 			"Use for 'watch settings', device configuration.",

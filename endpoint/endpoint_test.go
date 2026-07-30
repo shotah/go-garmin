@@ -98,7 +98,7 @@ func TestRegistry_Register(t *testing.T) {
 	ep := Endpoint{
 		Name:       "GetSleep",
 		CLICommand: "sleep",
-		MCPTool:    "get_sleep",
+		MCPTool:    "sleep_get",
 	}
 	r.Register(ep)
 
@@ -110,7 +110,7 @@ func TestRegistry_Register(t *testing.T) {
 func TestRegistry_ByCLI(t *testing.T) {
 	r := NewRegistry()
 
-	r.Register(Endpoint{Name: "GetSleep", CLICommand: "sleep", MCPTool: "get_sleep"})
+	r.Register(Endpoint{Name: "GetSleep", CLICommand: "sleep", MCPTool: "sleep_get"})
 	r.Register(Endpoint{Name: "ListWorkouts", CLICommand: "workouts", CLISubcommand: "list"})
 
 	byCLI := r.ByCLI()
@@ -125,11 +125,11 @@ func TestRegistry_ByCLI(t *testing.T) {
 func TestRegistry_ByMCP(t *testing.T) {
 	r := NewRegistry()
 
-	r.Register(Endpoint{Name: "GetSleep", MCPTool: "get_sleep"})
+	r.Register(Endpoint{Name: "GetSleep", MCPTool: "sleep_get"})
 
 	byMCP := r.ByMCP()
-	if _, ok := byMCP["get_sleep"]; !ok {
-		t.Error("expected 'get_sleep' in ByMCP")
+	if _, ok := byMCP["sleep_get"]; !ok {
+		t.Error("expected 'sleep_get' in ByMCP")
 	}
 }
 

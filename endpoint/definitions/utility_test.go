@@ -15,8 +15,8 @@ func TestUtilityEndpoints_Registered(t *testing.T) {
 	if ep.Name != "GetCurrentDate" {
 		t.Errorf("Name = %q, want GetCurrentDate", ep.Name)
 	}
-	if ep.MCPTool != "get_current_date" {
-		t.Errorf("MCPTool = %q, want get_current_date", ep.MCPTool)
+	if ep.MCPTool != "utility_get_current_date" {
+		t.Errorf("MCPTool = %q, want utility_get_current_date", ep.MCPTool)
 	}
 	if ep.Handler == nil {
 		t.Error("Handler should not be nil")

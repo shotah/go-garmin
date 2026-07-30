@@ -18,7 +18,7 @@ var TrainingPlanEndpoints = []endpoint.Endpoint{
 		HTTPMethod:    "GET",
 		CLICommand:    "plans",
 		CLISubcommand: "list",
-		MCPTool:       "list_training_plans",
+		MCPTool:       "training_plans_list",
 		Short:         "Garmin Coach / training plans",
 		Long: "Training plans on your account (Garmin Coach, phased plans) with plan_id for detail tools. " +
 			"Use for 'my training plan', 'what plan am I on'.",
@@ -37,14 +37,14 @@ var TrainingPlanEndpoints = []endpoint.Endpoint{
 		Path:       "/trainingplan-service/trainingplan/phased/{planId}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "plan_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Training plan ID from list_training_plans"},
+			{Name: "plan_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Training plan ID from training_plans_list"},
 		},
 		CLICommand:    "plans",
 		CLISubcommand: "phased",
-		MCPTool:       "get_training_plan_phased",
+		MCPTool:       "training_plans_get_phased",
 		Short:         "Phased plan structure",
 		Long: "Phased training plan detail: phases, workouts, schedule by plan_id. " +
-			"Use for structured multi-phase plans. Adaptive Coach plan: get_training_plan_adaptive.",
+			"Use for structured multi-phase plans. Adaptive Coach plan: training_plans_get_adaptive.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -60,14 +60,14 @@ var TrainingPlanEndpoints = []endpoint.Endpoint{
 		Path:       "/trainingplan-service/trainingplan/fbt-adaptive/{planId}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "plan_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Training plan ID from list_training_plans"},
+			{Name: "plan_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Training plan ID from training_plans_list"},
 		},
 		CLICommand:    "plans",
 		CLISubcommand: "adaptive",
-		MCPTool:       "get_training_plan_adaptive",
+		MCPTool:       "training_plans_get_adaptive",
 		Short:         "Garmin Coach adaptive plan",
 		Long: "FBT adaptive (Garmin Coach) plan detail: upcoming workouts and adjustments by plan_id. " +
-			"Use for 'Coach plan this week'. Fixed phased plan: get_training_plan_phased.",
+			"Use for 'Coach plan this week'. Fixed phased plan: training_plans_get_phased.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

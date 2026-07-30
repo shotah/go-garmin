@@ -21,7 +21,7 @@ var WeightEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "weight",
 		CLISubcommand: "daily",
-		MCPTool:       "get_weight",
+		MCPTool:       "weight_get",
 		Short:         "Scale weight + body composition",
 		Long: "Index/scale weigh-in for a day: weight, BMI, body fat %, muscle mass, bone mass, body water. " +
 			"Use for 'what's my weight', 'body composition', 'scale reading'. Not for steps, sleep, or activities.",
@@ -45,7 +45,7 @@ var WeightEndpoints = []endpoint.Endpoint{
 		CLICommand:    "weight",
 		CLISubcommand: "range",
 		Short:         "Weight trend over a date range",
-		Long:          "Weight summaries/averages over a date range. Use for 'weight this week/month'. For a single weigh-in prefer get_weight.",
+		Long:          "Weight summaries/averages over a date range. Use for 'weight this week/month'. For a single weigh-in prefer weight_get.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

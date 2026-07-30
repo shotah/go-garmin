@@ -55,7 +55,7 @@ STRENGTH TRAINING specific fields (sportTypeId=5):
 - exerciseName: Exercise key (e.g., "BARBELL_BENCH_PRESS", "DUMBBELL_CURL")
 - weightValue: Weight amount (optional)
 - weightUnit: Weight unit info (optional)
-Use list_exercise_categories, list_exercises, get_exercise tools to find valid values.
+Use exercises_list_categories, exercises_list, exercises_get tools to find valid values.
 
 SWIMMING specific fields (sportTypeId=4):
 - strokeType: {"strokeTypeId": N, "strokeTypeKey": "key"}
@@ -143,10 +143,10 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "list",
-		MCPTool:       "list_workouts",
+		MCPTool:       "workouts_list",
 		Short:         "Saved workout library",
 		Long: "Paginated custom workouts on Connect: name, sport, duration, workout_id. " +
-			"Use for 'my workouts', structured sessions — not completed activities (list_activities).",
+			"Use for 'my workouts', structured sessions — not completed activities (activities_list).",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -167,14 +167,14 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/workout/{workoutId}",
 		HTTPMethod: "GET",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from workouts_list"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "get",
-		MCPTool:       "get_workout",
+		MCPTool:       "workouts_get",
 		Short:         "Workout steps & segments",
 		Long: "Full workout definition: segments, steps, targets by workout_id. " +
-			"Use for 'what's in my interval workout'. Schedule to calendar: schedule_workout.",
+			"Use for 'what's in my interval workout'. Schedule to calendar: workouts_schedule.",
 		DependsOn: "ListWorkouts",
 		ArgProvider: func(result any) map[string]any {
 			list, ok := result.(*garmin.WorkoutList)
@@ -198,14 +198,14 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/schedule/{workoutId}",
 		HTTPMethod: "POST",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts to schedule"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from workouts_list to schedule"},
 			{Name: "date", Type: endpoint.ParamTypeDate, Required: true, Description: "Calendar day to schedule on (YYYY-MM-DD)"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "schedule",
-		MCPTool:       "schedule_workout",
+		MCPTool:       "workouts_schedule",
 		Short:         "Put workout on calendar",
-		Long: "Schedule a saved workout to a calendar day; returns schedule_id for unschedule_workout. " +
+		Long: "Schedule a saved workout to a calendar day; returns schedule_id for workouts_unschedule. " +
 			"Use for 'add workout to Friday'.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
@@ -222,13 +222,13 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/schedule/{scheduleId}",
 		HTTPMethod: "DELETE",
 		Params: []endpoint.Param{
-			{Name: "schedule_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Schedule ID returned by schedule_workout"},
+			{Name: "schedule_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Schedule ID returned by workouts_schedule"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "unschedule",
-		MCPTool:       "unschedule_workout",
+		MCPTool:       "workouts_unschedule",
 		Short:         "Remove scheduled workout",
-		Long: "Remove a workout from the calendar by schedule_id from schedule_workout. " +
+		Long: "Remove a workout from the calendar by schedule_id from workouts_schedule. " +
 			"Use to cancel a planned session — does not delete the workout template.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
@@ -251,7 +251,7 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Body:          workoutBodyConfig,
 		CLICommand:    "workouts",
 		CLISubcommand: "create",
-		MCPTool:       "create_workout",
+		MCPTool:       "workouts_create",
 		Short:         "Create workout template",
 		Long: "Create a new workout (segments/steps) on Connect via JSON body. " +
 			"Use for building interval sessions. --file, --json, or stdin.",
@@ -274,12 +274,12 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/workout/{workoutId}",
 		HTTPMethod: "PUT",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts to update"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from workouts_list to update"},
 		},
 		Body:          workoutBodyConfig,
 		CLICommand:    "workouts",
 		CLISubcommand: "update",
-		MCPTool:       "update_workout",
+		MCPTool:       "workouts_update",
 		Short:         "Edit workout template",
 		Long: "Replace an existing workout definition via JSON body. " +
 			"Use to change steps/segments. --file, --json, or stdin.",
@@ -302,11 +302,11 @@ var WorkoutEndpoints = []endpoint.Endpoint{
 		Path:       "/workout-service/workout/{workoutId}",
 		HTTPMethod: "DELETE",
 		Params: []endpoint.Param{
-			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from list_workouts to delete permanently"},
+			{Name: "workout_id", Type: endpoint.ParamTypeInt, Required: true, Description: "Workout ID from workouts_list to delete permanently"},
 		},
 		CLICommand:    "workouts",
 		CLISubcommand: "delete",
-		MCPTool:       "delete_workout",
+		MCPTool:       "workouts_delete",
 		Short:         "Delete workout template",
 		Long: "Permanently delete a saved workout from Connect by workout_id. " +
 			"Use only when removing a template — does not delete completed activities.",

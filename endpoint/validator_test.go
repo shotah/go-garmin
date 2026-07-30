@@ -18,7 +18,7 @@ func TestValidator_ValidEndpoint(t *testing.T) {
 		Path:       "/sleep-service/sleep",
 		HTTPMethod: "GET",
 		CLICommand: "sleep",
-		MCPTool:    "get_sleep",
+		MCPTool:    "sleep_get",
 		Short:      "Get sleep",
 		Long:       "Get sleep data",
 		Handler:    func(_ context.Context, _ any, _ *HandlerArgs) (any, error) { return struct{}{}, nil },
@@ -235,7 +235,7 @@ func TestValidator_POSTWithoutBody(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:       "CreateWorkout",
-		Cassette:   "create_workout",
+		Cassette:   "workouts_create",
 		Path:       "/workout",
 		HTTPMethod: "POST",
 		CLICommand: "workout",
@@ -246,7 +246,7 @@ func TestValidator_POSTWithoutBody(t *testing.T) {
 	})
 
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "create_workout.yaml"), []byte(""), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "workouts_create.yaml"), []byte(""), 0o600); err != nil {
 		t.Fatalf("failed to write cassette file: %v", err)
 	}
 
@@ -262,7 +262,7 @@ func TestValidator_PUTWithoutBody(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:       "UpdateWorkout",
-		Cassette:   "update_workout",
+		Cassette:   "workouts_update",
 		Path:       "/workout",
 		HTTPMethod: "PUT",
 		CLICommand: "workout",
@@ -273,7 +273,7 @@ func TestValidator_PUTWithoutBody(t *testing.T) {
 	})
 
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "update_workout.yaml"), []byte(""), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "workouts_update.yaml"), []byte(""), 0o600); err != nil {
 		t.Fatalf("failed to write cassette file: %v", err)
 	}
 

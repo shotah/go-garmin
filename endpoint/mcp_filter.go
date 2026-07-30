@@ -105,16 +105,16 @@ func (f ToolFilter) ValidateServices(r *Registry) error {
 
 // mcpTierCore is the small recovery / coaching surface (~10 tools).
 var mcpTierCore = map[string]struct{}{
-	"get_current_date":             {},
-	"get_sleep":                    {},
-	"get_weight":                   {},
-	"get_body_battery":             {},
-	"get_hrv":                      {},
-	"get_training_readiness":       {},
-	"list_activities":              {},
-	"get_activity":                 {},
-	"get_activity_typed_splits":    {},
-	"get_activity_split_summaries": {},
+	"utility_get_current_date":       {},
+	"sleep_get":                      {},
+	"weight_get":                     {},
+	"wellness_get_body_battery":      {},
+	"hrv_get":                        {},
+	"metrics_get_training_readiness": {},
+	"activities_list":                {},
+	"activities_get":                 {},
+	"activities_get_typed_splits":    {},
+	"activities_get_split_summaries": {},
 }
 
 // mcpTierExtended is core plus common coaching extras.
@@ -124,15 +124,15 @@ var mcpTierExtended = func() map[string]struct{} {
 		m[k] = struct{}{}
 	}
 	for _, k := range []string{
-		"get_stress",
-		"get_heart_rate",
-		"get_body_battery_reports",
-		"get_sleep_score_stats",
-		"get_intensity_minutes",
-		"get_training_status",
-		"get_vo2max",
-		"get_activity_details",
-		"get_daily_user_summary",
+		"wellness_get_stress",
+		"wellness_get_heart_rate",
+		"wellness_get_body_battery_reports",
+		"wellness_get_sleep_score_stats",
+		"wellness_get_intensity_minutes",
+		"metrics_get_training_status",
+		"metrics_get_vo2max",
+		"activities_get_details",
+		"summary_get_daily",
 	} {
 		m[k] = struct{}{}
 	}

@@ -29,11 +29,11 @@ var SleepEndpoints = []endpoint.Endpoint{
 		},
 
 		CLICommand: "sleep",
-		MCPTool:    "get_sleep",
+		MCPTool:    "sleep_get",
 		Short:      "Sleep score + stages (use for last night)",
 		Long: "ONLY tool for overnight sleep / sleep score / 'how did I sleep' / 'last night' / sleep history. " +
-			"Returns score, duration, deep/light/REM, awake time. Call immediately — do not narrate, do not use get_body_battery. " +
-			"For 'last night', omit date or pass today (wake-up day). Prefer over get_wellness_sleep.",
+			"Returns score, duration, deep/light/REM, awake time. Call immediately — do not narrate, do not use wellness_get_body_battery. " +
+			"For 'last night', omit date or pass today (wake-up day). Prefer over wellness_get_sleep.",
 
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)

@@ -43,7 +43,7 @@ This project uses a **declarative endpoint registry**. One definition generates 
     },
     CLICommand:    "service",
     CLISubcommand: "subcommand",
-    MCPTool:       "get_data",
+    MCPTool:       "service_get_data", // {service}_{verb}_{object} — no garmin_ prefix
     Short:         "Short description",
     Long:          "Longer description (this is what MCP models see)",
     Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {

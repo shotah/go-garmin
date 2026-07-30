@@ -22,10 +22,10 @@ var PeriodicHealthEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "health",
 		CLISubcommand: "day",
-		MCPTool:       "get_menstrual_day_view",
+		MCPTool:       "periodic_health_get_menstrual_day",
 		Short:         "Cycle / symptoms for one day",
 		Long: "Menstrual or pregnancy day view: cycle phase summary and logged symptoms for one calendar day. " +
-			"Use for 'period today', symptoms. Multi-day calendar: get_menstrual_calendar.",
+			"Use for 'period today', symptoms. Multi-day calendar: periodic_health_get_menstrual_calendar.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -45,10 +45,10 @@ var PeriodicHealthEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "health",
 		CLISubcommand: "calendar",
-		MCPTool:       "get_menstrual_calendar",
+		MCPTool:       "periodic_health_get_menstrual_calendar",
 		Short:         "Cycle calendar over range",
 		Long: "Menstrual calendar over a date range (default last 7 days): cycle days, symptoms, ovulation, notes. " +
-			"Use for 'cycle this month'. Single day: get_menstrual_day_view.",
+			"Use for 'cycle this month'. Single day: periodic_health_get_menstrual_day.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -73,7 +73,7 @@ var PeriodicHealthEndpoints = []endpoint.Endpoint{
 		HTTPMethod:    "GET",
 		CLICommand:    "health",
 		CLISubcommand: "pregnancy",
-		MCPTool:       "get_pregnancy_snapshot",
+		MCPTool:       "periodic_health_get_pregnancy",
 		Short:         "Pregnancy tracking summary",
 		Long: "Current pregnancy snapshot summary from Connect (due date context, tracking status). " +
 			"Use for 'pregnancy tracking', pregnancy overview.",

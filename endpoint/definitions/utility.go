@@ -15,7 +15,7 @@ var UtilityEndpoints = []endpoint.Endpoint{
 		Cassette:   "none",
 		Path:       "local://current-date",
 		HTTPMethod: "GET",
-		MCPTool:    "get_current_date",
+		MCPTool:    "utility_get_current_date",
 		Short:      "Today's local calendar date",
 		Long: "Returns today's local date (YYYY-MM-DD), weekday, and ISO timestamp. " +
 			"Use when you need an explicit date before calling dated Garmin tools; " +

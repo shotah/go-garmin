@@ -19,8 +19,8 @@ func TestSleepEndpoints_Registered(t *testing.T) {
 	if ep.CLICommand != "sleep" {
 		t.Errorf("CLICommand = %q, want sleep", ep.CLICommand)
 	}
-	if ep.MCPTool != "get_sleep" {
-		t.Errorf("MCPTool = %q, want get_sleep", ep.MCPTool)
+	if ep.MCPTool != "sleep_get" {
+		t.Errorf("MCPTool = %q, want sleep_get", ep.MCPTool)
 	}
 	if ep.Handler == nil {
 		t.Error("Handler should not be nil")

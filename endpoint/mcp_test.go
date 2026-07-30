@@ -12,7 +12,7 @@ func TestMCPGenerator_RegisterTools(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:    "GetSleep",
-		MCPTool: "get_sleep",
+		MCPTool: "sleep_get",
 		Long:    "Get sleep data",
 		Params: []Param{
 			{Name: "date", Type: ParamTypeDate, Description: "The date"},
@@ -33,8 +33,8 @@ func TestMCPGenerator_RegisterTools(t *testing.T) {
 	if len(tools) != 1 {
 		t.Fatalf("expected 1 tool, got %d", len(tools))
 	}
-	if _, ok := tools["get_sleep"]; !ok {
-		t.Error("expected 'get_sleep' tool to be registered")
+	if _, ok := tools["sleep_get"]; !ok {
+		t.Error("expected 'sleep_get' tool to be registered")
 	}
 }
 
@@ -89,7 +89,7 @@ func TestMCPGenerator_MultipleParams(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:    "ListActivities",
-		MCPTool: "list_activities",
+		MCPTool: "activities_list",
 		Long:    "List activities",
 		Params: []Param{
 			{Name: "start", Type: ParamTypeInt, Description: "Starting index"},
@@ -116,7 +116,7 @@ func TestMCPGenerator_DateRangeParams(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:    "GetWeight",
-		MCPTool: "get_weight",
+		MCPTool: "weight_get",
 		Long:    "Get weight data",
 		Params: []Param{
 			{Name: "range", Type: ParamTypeDateRange, Description: "Date range"},
@@ -168,7 +168,7 @@ func TestMCPGenerator_RequiredParam(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:    "GetActivity",
-		MCPTool: "get_activity",
+		MCPTool: "activities_get",
 		Long:    "Get activity",
 		Params: []Param{
 			{Name: "activity_id", Type: ParamTypeString, Required: true, Description: "The activity ID"},

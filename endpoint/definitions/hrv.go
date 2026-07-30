@@ -21,11 +21,11 @@ var HRVEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "hrv",
 		CLISubcommand: "daily",
-		MCPTool:       "get_hrv",
+		MCPTool:       "hrv_get",
 		Short:         "HRV status / overnight average",
 		Long: "Heart-rate variability for a day: overnight average, weekly average, and baseline range. " +
-			"Use for 'HRV', 'recovery', 'nervous system readiness'. Pair with get_sleep / get_training_readiness for coaching. " +
-			"Not a sleep score — use get_sleep for sleep quality.",
+			"Use for 'HRV', 'recovery', 'nervous system readiness'. Pair with sleep_get / metrics_get_training_readiness for coaching. " +
+			"Not a sleep score — use sleep_get for sleep quality.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -46,7 +46,7 @@ var HRVEndpoints = []endpoint.Endpoint{
 		CLICommand:    "hrv",
 		CLISubcommand: "range",
 		Short:         "HRV trend over a date range",
-		Long:          "HRV daily summaries over a date range. Use for multi-day HRV trends. For today's/overnight HRV prefer get_hrv.",
+		Long:          "HRV daily summaries over a date range. Use for multi-day HRV trends. For today's/overnight HRV prefer hrv_get.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

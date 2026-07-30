@@ -215,6 +215,12 @@ garmin golf shots <scorecard-id> [--holes=1,2,3,...]
 
 `garmin mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io/) server over stdio. Hosts like Claude Code, Claude Desktop, and Cursor spawn that process and let the model call tools.
 
+### Tool naming
+
+MCP tool names use `{service}_{verb}_{object}` (e.g. `sleep_get`,
+`activities_list`, `wellness_get_body_battery`). Do **not** prefix with
+`garmin_` — hosts already add the server id (`garmin__sleep_get`).
+
 ### Narrowing the tool surface
 
 By default every eligible endpoint is published (~100 tools). That is often too
@@ -233,14 +239,14 @@ garmin mcp --tool-tier core
 garmin mcp --tools "sleep wellness hrv weight activities metrics utility" --tool-tier core
 ```
 
-**`core`:** `get_current_date`, `get_sleep`, `get_weight`, `get_body_battery`,
-`get_hrv`, `get_training_readiness`, `list_activities`, `get_activity`,
-`get_activity_typed_splits`, `get_activity_split_summaries`.
+**`core`:** `utility_get_current_date`, `sleep_get`, `weight_get`, `wellness_get_body_battery`,
+`hrv_get`, `metrics_get_training_readiness`, `activities_list`, `activities_get`,
+`activities_get_typed_splits`, `activities_get_split_summaries`.
 
-**`extended`:** core plus `get_stress`, `get_heart_rate`,
-`get_body_battery_reports`, `get_sleep_score_stats`, `get_intensity_minutes`,
-`get_training_status`, `get_vo2max`, `get_activity_details`,
-`get_daily_user_summary`.
+**`extended`:** core plus `wellness_get_stress`, `wellness_get_heart_rate`,
+`wellness_get_body_battery_reports`, `wellness_get_sleep_score_stats`, `wellness_get_intensity_minutes`,
+`metrics_get_training_status`, `metrics_get_vo2max`, `activities_get_details`,
+`summary_get_daily`.
 
 **`complete`:** all tools in the selected services (historical behavior).
 
@@ -254,7 +260,7 @@ When the MCP host connects, it asks the server for its tool list. For each regis
 
 | What the model sees | Where it comes from |
 |---------------------|---------------------|
-| **Tool name** | `MCPTool` in `endpoint/definitions/*.go` (e.g. `get_sleep`) |
+| **Tool name** | `MCPTool` in `endpoint/definitions/*.go` (e.g. `sleep_get`) |
 | **Tool description** | the endpoint `Long` string |
 | **Argument schema** | each `Param` name/type/required + `Description` |
 | **JSON body hints** (write tools) | `BodyConfig.Description` and `BodyConfig.Example` |
@@ -264,7 +270,7 @@ Flow:
 
 1. Host starts `garmin mcp` (optionally with `--tool-tier` / `--tools`) and loads `session.json`.
 2. Host sends `tools/list` → model gets names + descriptions + schemas (filtered set, or ~100 by default).
-3. Model picks a tool and arguments (e.g. `get_sleep` with `date=2026-07-14`).
+3. Model picks a tool and arguments (e.g. `sleep_get` with `date=2026-07-14`).
 4. Host sends `tools/call` → handler hits Garmin Connect → result comes back as JSON text.
 5. Model reasons over that JSON to answer you.
 
@@ -272,7 +278,7 @@ Useful implications:
 
 - Prefer `--tool-tier core` (or `extended`) for personal-assistant hosts so the model is not flooded.
 - Better `Long` / param descriptions in endpoint definitions = better tool use.
-- `get_current_date` is a local helper (no Garmin call) so the model can resolve “today” / “yesterday”.
+- `utility_get_current_date` is a local helper (no Garmin call) so the model can resolve “today” / “yesterday”.
 - Binary downloads (`RawOutput`) are CLI-only and are **not** registered as MCP tools.
 - Auth is invisible to the model: it just gets errors if you are not logged in.
 
@@ -348,25 +354,25 @@ generated from the endpoint registry:
 
 | Category | Tools |
 |----------|-------|
-| Utility | `get_current_date` |
-| Sleep | `get_sleep` |
-| Wellness | `get_stress`, `get_body_battery`, `get_heart_rate`, `get_spo2`, `get_respiration`, `get_intensity_minutes`, `get_daily_events`, `get_wellness_sleep`, `get_steps_chart`, `get_floors`, `get_body_battery_reports`, `get_sleep_score_stats` |
-| User summary | `get_daily_user_summary`, `get_daily_hydration`, `log_hydration`, `get_steps_daily_stats`, `get_steps_weekly_stats`, `get_stress_daily_stats`, `get_stress_weekly_stats`, `get_hydration_stats`, `get_intensity_minutes_daily_stats`, `get_intensity_minutes_weekly_stats` |
-| Activity | `list_activities`, `get_activity`, `get_activity_types`, `get_activity_splits`, `get_activity_weather`, `get_activity_details`, `get_activity_hr_zones`, `get_activity_power_zones`, `get_activity_exercise_sets`, `get_activity_typed_splits`, `get_activity_split_summaries`, `get_activity_gear` |
-| Weight / HRV | `get_weight`, `get_hrv` |
-| Metrics | `get_training_readiness`, `get_training_status`, `get_vo2max`, `get_endurance_score`, `get_hill_score`, `get_hill_score_stats`, `get_training_load_balance`, `get_heat_altitude_acclimation`, `get_race_predictions`, `get_race_predictions_daily`, `get_race_predictions_monthly` |
-| Fitness age / stats | `get_fitness_age`, `get_fitness_age_stats`, `get_fitness_stats`, `get_fitness_stats_activities` |
-| Biometric | `get_lactate_threshold`, `get_cycling_ftp`, `get_heart_rate_zones`, `get_power_to_weight` |
-| Devices / profile | `list_devices`, `get_device_settings`, `get_social_profile`, `get_user_settings`, `get_profile_settings` |
-| Workouts | `list_workouts`, `get_workout`, `create_workout`, `update_workout`, `delete_workout`, `schedule_workout`, `unschedule_workout` |
-| Exercises | `list_exercise_categories`, `list_muscle_groups`, `list_equipment_types`, `list_exercises`, `get_exercise` |
-| Calendar / courses | `get_calendar`, `list_courses`, `get_course`, `delete_course` |
-| Records / plans | `get_personal_records`, `list_training_plans`, `get_training_plan_phased`, `get_training_plan_adaptive` |
-| Badges | `get_earned_badges`, `get_available_badges`, `get_completed_badge_challenges`, `get_available_badge_challenges`, `get_non_completed_badge_challenges`, `get_virtual_challenges_in_progress`, `get_adhoc_historical_challenges` |
-| Blood pressure | `get_blood_pressure_range`, `log_blood_pressure`, `delete_blood_pressure` |
-| Periodic health | `get_menstrual_day_view`, `get_menstrual_calendar`, `get_pregnancy_snapshot` |
-| Lifestyle | `get_daily_lifestyle_log`, `create_lifestyle_behaviour` |
-| Golf | `list_golf_scorecards`, `get_golf_scorecard`, `get_golf_shot_data` |
+| Utility | `utility_get_current_date` |
+| Sleep | `sleep_get` |
+| Wellness | `wellness_get_stress`, `wellness_get_body_battery`, `wellness_get_heart_rate`, `wellness_get_spo2`, `wellness_get_respiration`, `wellness_get_intensity_minutes`, `wellness_get_daily_events`, `wellness_get_sleep`, `wellness_get_steps_chart`, `wellness_get_floors`, `wellness_get_body_battery_reports`, `wellness_get_sleep_score_stats` |
+| User summary | `summary_get_daily`, `summary_get_hydration`, `summary_log_hydration`, `summary_get_steps_daily`, `summary_get_steps_weekly`, `summary_get_stress_daily`, `summary_get_stress_weekly`, `summary_get_hydration_stats`, `summary_get_intensity_minutes_daily`, `summary_get_intensity_minutes_weekly` |
+| Activity | `activities_list`, `activities_get`, `activities_get_types`, `activities_get_splits`, `activities_get_weather`, `activities_get_details`, `activities_get_hr_zones`, `activities_get_power_zones`, `activities_get_exercise_sets`, `activities_get_typed_splits`, `activities_get_split_summaries`, `activities_get_gear` |
+| Weight / HRV | `weight_get`, `hrv_get` |
+| Metrics | `metrics_get_training_readiness`, `metrics_get_training_status`, `metrics_get_vo2max`, `metrics_get_endurance_score`, `metrics_get_hill_score`, `metrics_get_hill_score_stats`, `metrics_get_training_load_balance`, `metrics_get_heat_altitude_acclimation`, `metrics_get_race_predictions`, `metrics_get_race_predictions_daily`, `metrics_get_race_predictions_monthly` |
+| Fitness age / stats | `fitness_age_get`, `fitness_age_get_stats`, `fitness_stats_get`, `fitness_stats_get_activities` |
+| Biometric | `biometric_get_lactate_threshold`, `biometric_get_cycling_ftp`, `biometric_get_heart_rate_zones`, `biometric_get_power_to_weight` |
+| Devices / profile | `devices_list`, `devices_get_settings`, `profile_get_social`, `profile_get_user_settings`, `profile_get_settings` |
+| Workouts | `workouts_list`, `workouts_get`, `workouts_create`, `workouts_update`, `workouts_delete`, `workouts_schedule`, `workouts_unschedule` |
+| Exercises | `exercises_list_categories`, `exercises_list_muscle_groups`, `exercises_list_equipment`, `exercises_list`, `exercises_get` |
+| Calendar / courses | `calendar_get`, `courses_list`, `courses_get`, `courses_delete` |
+| Records / plans | `personal_records_get`, `training_plans_list`, `training_plans_get_phased`, `training_plans_get_adaptive` |
+| Badges | `badges_get_earned`, `badges_get_available`, `badges_get_completed_challenges`, `badges_get_available_challenges`, `badges_get_open_challenges`, `badges_get_virtual_in_progress`, `badges_get_adhoc_historical` |
+| Blood pressure | `blood_pressure_get_range`, `blood_pressure_log`, `blood_pressure_delete` |
+| Periodic health | `periodic_health_get_menstrual_day`, `periodic_health_get_menstrual_calendar`, `periodic_health_get_pregnancy` |
+| Lifestyle | `lifestyle_get_daily`, `lifestyle_create_behaviour` |
+| Golf | `golf_list_scorecards`, `golf_get_scorecard`, `golf_get_shot_data` |
 
 ### LLM-powered workout creation
 

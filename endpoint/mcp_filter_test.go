@@ -36,36 +36,36 @@ func TestParseToolFilter(t *testing.T) {
 
 func TestToolFilter_Allows(t *testing.T) {
 	core, _ := ParseToolFilter("", "core")
-	if !core.Allows(&Endpoint{Service: "Sleep", MCPTool: "get_sleep"}) {
-		t.Fatal("core should allow get_sleep")
+	if !core.Allows(&Endpoint{Service: "Sleep", MCPTool: "sleep_get"}) {
+		t.Fatal("core should allow sleep_get")
 	}
-	if core.Allows(&Endpoint{Service: "Golf", MCPTool: "list_golf_scorecards"}) {
+	if core.Allows(&Endpoint{Service: "Golf", MCPTool: "golf_list_scorecards"}) {
 		t.Fatal("core should not allow golf")
 	}
-	if core.Allows(&Endpoint{Service: "Sleep", MCPTool: "get_sleep", RawOutput: true}) {
+	if core.Allows(&Endpoint{Service: "Sleep", MCPTool: "sleep_get", RawOutput: true}) {
 		t.Fatal("raw output skipped")
 	}
 
 	svc, _ := ParseToolFilter("sleep", "complete")
-	if !svc.Allows(&Endpoint{Service: "Sleep", MCPTool: "get_sleep"}) {
+	if !svc.Allows(&Endpoint{Service: "Sleep", MCPTool: "sleep_get"}) {
 		t.Fatal("service filter should allow sleep")
 	}
-	if svc.Allows(&Endpoint{Service: "Weight", MCPTool: "get_weight"}) {
+	if svc.Allows(&Endpoint{Service: "Weight", MCPTool: "weight_get"}) {
 		t.Fatal("service filter should deny weight")
 	}
 
 	// Intersection: service match but not in core → denied
 	sleepCore, _ := ParseToolFilter("wellness", "core")
-	if sleepCore.Allows(&Endpoint{Service: "Wellness", MCPTool: "get_stress"}) {
-		t.Fatal("get_stress is extended, not core")
+	if sleepCore.Allows(&Endpoint{Service: "Wellness", MCPTool: "wellness_get_stress"}) {
+		t.Fatal("wellness_get_stress is extended, not core")
 	}
-	if !sleepCore.Allows(&Endpoint{Service: "Wellness", MCPTool: "get_body_battery"}) {
-		t.Fatal("get_body_battery is core")
+	if !sleepCore.Allows(&Endpoint{Service: "Wellness", MCPTool: "wellness_get_body_battery"}) {
+		t.Fatal("wellness_get_body_battery is core")
 	}
 
 	ext, _ := ParseToolFilter("", "extended")
-	if !ext.Allows(&Endpoint{Service: "Wellness", MCPTool: "get_stress"}) {
-		t.Fatal("extended should allow get_stress")
+	if !ext.Allows(&Endpoint{Service: "Wellness", MCPTool: "wellness_get_stress"}) {
+		t.Fatal("extended should allow wellness_get_stress")
 	}
 }
 
@@ -74,10 +74,10 @@ func TestRegisterTools_Filter(t *testing.T) {
 	noop := func(_ context.Context, _ any, _ *HandlerArgs) (any, error) {
 		return map[string]string{"ok": "1"}, nil
 	}
-	r.Register(Endpoint{Name: "GetSleep", Service: "Sleep", MCPTool: "get_sleep", Handler: noop})
-	r.Register(Endpoint{Name: "GetStress", Service: "Wellness", MCPTool: "get_stress", Handler: noop})
-	r.Register(Endpoint{Name: "GetBB", Service: "Wellness", MCPTool: "get_body_battery", Handler: noop})
-	r.Register(Endpoint{Name: "Golf", Service: "Golf", MCPTool: "list_golf_scorecards", Handler: noop})
+	r.Register(Endpoint{Name: "GetSleep", Service: "Sleep", MCPTool: "sleep_get", Handler: noop})
+	r.Register(Endpoint{Name: "GetStress", Service: "Wellness", MCPTool: "wellness_get_stress", Handler: noop})
+	r.Register(Endpoint{Name: "GetBB", Service: "Wellness", MCPTool: "wellness_get_body_battery", Handler: noop})
+	r.Register(Endpoint{Name: "Golf", Service: "Golf", MCPTool: "golf_list_scorecards", Handler: noop})
 
 	s := server.NewMCPServer("test", "1.0.0", server.WithToolCapabilities(true))
 	gen := NewMCPGenerator(r, nil)
@@ -90,24 +90,24 @@ func TestRegisterTools_Filter(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n != 2 {
-		t.Fatalf("core count=%d want 2 (get_sleep, get_body_battery)", n)
+		t.Fatalf("core count=%d want 2 (sleep_get, wellness_get_body_battery)", n)
 	}
 	tools := s.ListTools()
-	if _, ok := tools["get_sleep"]; !ok {
-		t.Fatal("missing get_sleep")
+	if _, ok := tools["sleep_get"]; !ok {
+		t.Fatal("missing sleep_get")
 	}
-	if _, ok := tools["get_body_battery"]; !ok {
-		t.Fatal("missing get_body_battery")
+	if _, ok := tools["wellness_get_body_battery"]; !ok {
+		t.Fatal("missing wellness_get_body_battery")
 	}
-	if _, ok := tools["get_stress"]; ok {
-		t.Fatal("get_stress should not be in core")
+	if _, ok := tools["wellness_get_stress"]; ok {
+		t.Fatal("wellness_get_stress should not be in core")
 	}
 }
 
 func TestRegisterTools_UnknownService(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
-		Name: "GetSleep", Service: "Sleep", MCPTool: "get_sleep",
+		Name: "GetSleep", Service: "Sleep", MCPTool: "sleep_get",
 		Handler: func(_ context.Context, _ any, _ *HandlerArgs) (any, error) {
 			return map[string]string{}, nil
 		},

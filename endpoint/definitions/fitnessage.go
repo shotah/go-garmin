@@ -23,10 +23,10 @@ var FitnessAgeEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "fitnessage",
 		CLISubcommand: "daily",
-		MCPTool:       "get_fitness_age",
+		MCPTool:       "fitness_age_get",
 		Short:         "Fitness age vs real age",
 		Long: "Fitness Age for one day: chronological age, fitness age, achievable target, contributors. " +
-			"Use for 'fitness age', 'am I younger than my age'. Trends: get_fitness_age_stats.",
+			"Use for 'fitness age', 'am I younger than my age'. Trends: fitness_age_get_stats.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -46,10 +46,10 @@ var FitnessAgeEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "fitnessage",
 		CLISubcommand: "stats",
-		MCPTool:       "get_fitness_age_stats",
+		MCPTool:       "fitness_age_get_stats",
 		Short:         "Fitness age over time",
 		Long: "Daily fitness age, achievable age, RHR, BMI, vigorous-activity days over a range (default 7 days, max 28). " +
-			"Use for 'fitness age trend'. Single day: get_fitness_age.",
+			"Use for 'fitness age trend'. Single day: fitness_age_get.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

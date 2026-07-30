@@ -40,7 +40,7 @@ var LifestyleEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "lifestyle",
 		CLISubcommand: "daily",
-		MCPTool:       "get_daily_lifestyle_log",
+		MCPTool:       "lifestyle_get_daily",
 		Short:         "Habit / lifestyle log for a day",
 		Long: "Lifestyle logging entries and completion stats for one calendar day (custom behaviours, tracked habits). " +
 			"Use for 'did I meditate', habit tracking — not steps or workouts.",
@@ -61,7 +61,7 @@ var LifestyleEndpoints = []endpoint.Endpoint{
 		Body:          lifestyleBehaviourBodyConfig,
 		CLICommand:    "lifestyle",
 		CLISubcommand: "create-behaviour",
-		MCPTool:       "create_lifestyle_behaviour",
+		MCPTool:       "lifestyle_create_behaviour",
 		Short:         "Create a habit tag",
 		Long: "Create a custom lifestyle behaviour tag on Connect via JSON body. " +
 			"Use for new habit names before logging. --file, --json, or stdin; live API uses POST.",

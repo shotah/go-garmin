@@ -21,10 +21,10 @@ var PersonalRecordsEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "records",
 		CLISubcommand: "list",
-		MCPTool:       "get_personal_records",
+		MCPTool:       "personal_records_get",
 		Short:         "All-time personal bests",
 		Long: "Personal records (PRs) for distances and activities: best times, dates. " +
-			"Use for 'my PRs', 'fastest 5K'. Per-workout detail: get_activity after list_activities.",
+			"Use for 'my PRs', 'fastest 5K'. Per-workout detail: activities_get after activities_list.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

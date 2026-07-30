@@ -22,10 +22,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "stress",
-		MCPTool:       "get_stress",
+		MCPTool:       "wellness_get_stress",
 		Short:         "All-day stress levels",
 		Long: "Intraday stress levels for one day (max, average, chart). Use for 'stress today', 'how stressed was I'. " +
-			"Not Body Battery (get_body_battery) and not overnight HRV (get_hrv).",
+			"Not Body Battery (wellness_get_body_battery) and not overnight HRV (hrv_get).",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -45,12 +45,12 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "body-battery",
-		MCPTool:       "get_body_battery",
+		MCPTool:       "wellness_get_body_battery",
 		Short:         "Body Battery energy events (NOT sleep score)",
-		Long: "NOT for sleep score / 'how did I sleep' / last night — use get_sleep for that. " +
+		Long: "NOT for sleep score / 'how did I sleep' / last night — use sleep_get for that. " +
 			"Body Battery charge/drain events for one day (energy timeline). " +
 			"Use only for 'body battery', 'energy level', 'am I drained'. " +
-			"Multi-day totals: get_body_battery_reports.",
+			"Multi-day totals: wellness_get_body_battery_reports.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -70,10 +70,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "heart-rate",
-		MCPTool:       "get_heart_rate",
+		MCPTool:       "wellness_get_heart_rate",
 		Short:         "Daily resting/max HR + zones",
 		Long: "All-day heart rate for a date: resting HR, max HR, time in zones. Use for 'resting heart rate', 'HR today'. " +
-			"Not HRV (get_hrv) and not per-activity HR zones (get_activity_hr_zones).",
+			"Not HRV (hrv_get) and not per-activity HR zones (activities_get_hr_zones).",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -93,10 +93,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "spo2",
-		MCPTool:       "get_spo2",
+		MCPTool:       "wellness_get_spo2",
 		Short:         "Daily SpO2 / blood oxygen",
 		Long: "Blood oxygen (SpO2) for one calendar day: average, lowest, and sleep SpO2 when available. " +
-			"Use for 'blood oxygen', 'SpO2'. Not respiration rate — use get_respiration.",
+			"Use for 'blood oxygen', 'SpO2'. Not respiration rate — use wellness_get_respiration.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -116,10 +116,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "respiration",
-		MCPTool:       "get_respiration",
+		MCPTool:       "wellness_get_respiration",
 		Short:         "Daily breathing rate",
 		Long: "Respiration rate for one calendar day: waking and sleep averages. " +
-			"Use for 'breathing rate', 'respiration while sleeping'. Not SpO2 — use get_spo2.",
+			"Use for 'breathing rate', 'respiration while sleeping'. Not SpO2 — use wellness_get_spo2.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -139,10 +139,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "intensity-minutes",
-		MCPTool:       "get_intensity_minutes",
+		MCPTool:       "wellness_get_intensity_minutes",
 		Short:         "Weekly intensity minutes progress",
 		Long: "Moderate + vigorous intensity minutes and progress toward the weekly goal (as of the given day). " +
-			"Use for 'intensity minutes', 'am I hitting my activity goal'. Not a workout list — use list_activities for that.",
+			"Use for 'intensity minutes', 'am I hitting my activity goal'. Not a workout list — use activities_list for that.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -162,10 +162,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "events",
-		MCPTool:       "get_daily_events",
+		MCPTool:       "wellness_get_daily_events",
 		Short:         "Auto-detected wellness events",
 		Long: "Garmin-detected wellness events for one day (auto activities, naps, etc.). " +
-			"Use for 'what did my watch detect today'. Not full workouts — use list_activities for sessions.",
+			"Use for 'what did my watch detect today'. Not full workouts — use activities_list for sessions.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -186,10 +186,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "sleep",
-		MCPTool:       "get_wellness_sleep",
-		Short:         "Alternate sleep API (prefer get_sleep)",
-		Long: "Alternate wellness-service sleep payload. Prefer get_sleep for 'how did I sleep' / sleep score / last night — " +
-			"that is the primary sleep tool. Only use this if get_sleep is unavailable or you need this specific path.",
+		MCPTool:       "wellness_get_sleep",
+		Short:         "Alternate sleep API (prefer sleep_get)",
+		Long: "Alternate wellness-service sleep payload. Prefer sleep_get for 'how did I sleep' / sleep score / last night — " +
+			"that is the primary sleep tool. Only use this if sleep_get is unavailable or you need this specific path.",
 		DependsOn: "GetSocialProfile",
 		ArgProvider: func(result any) map[string]any {
 			profile, ok := result.(*garmin.SocialProfile)
@@ -222,10 +222,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "steps",
-		MCPTool:       "get_steps_chart",
+		MCPTool:       "wellness_get_steps_chart",
 		Short:         "Intraday steps timeline",
 		Long: "Intraday steps/activity chart (~15-min buckets) for one calendar day. " +
-			"Use for 'when did I walk today', step patterns. Prefer get_daily_user_summary for today's total; get_steps_daily_stats for multi-day trends.",
+			"Use for 'when did I walk today', step patterns. Prefer summary_get_daily for today's total; summary_get_steps_daily for multi-day trends.",
 		DependsOn: "GetSocialProfile",
 		ArgProvider: func(result any) map[string]any {
 			profile, ok := result.(*garmin.SocialProfile)
@@ -257,10 +257,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "floors",
-		MCPTool:       "get_floors",
+		MCPTool:       "wellness_get_floors",
 		Short:         "Floors up/down intraday chart",
 		Long: "Floors ascended and descended over one calendar day. " +
-			"Use for 'floors climbed today'. Daily total also on get_daily_user_summary.",
+			"Use for 'floors climbed today'. Daily total also on summary_get_daily.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -280,10 +280,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "body-battery-reports",
-		MCPTool:       "get_body_battery_reports",
+		MCPTool:       "wellness_get_body_battery_reports",
 		Short:         "Multi-day Body Battery charged/drained",
 		Long: "Daily Body Battery charged/drained totals over a date range (default last 7 days). " +
-			"Use for weekly energy trends. For today's event timeline use get_body_battery.",
+			"Use for weekly energy trends. For today's event timeline use wellness_get_body_battery.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {
@@ -311,10 +311,10 @@ var WellnessEndpoints = []endpoint.Endpoint{
 		},
 		CLICommand:    "wellness",
 		CLISubcommand: "sleep-score",
-		MCPTool:       "get_sleep_score_stats",
+		MCPTool:       "wellness_get_sleep_score_stats",
 		Short:         "Multi-day sleep score trend",
 		Long: "Daily sleep scores only over a date range (default last 7 days) — no stages/duration detail. " +
-			"Use for 'sleep score this week'. For last night's full sleep (stages, duration, score) use get_sleep.",
+			"Use for 'sleep score this week'. For last night's full sleep (stages, duration, score) use sleep_get.",
 		Handler: func(ctx context.Context, c any, args *endpoint.HandlerArgs) (any, error) {
 			client, ok := c.(*garmin.Client)
 			if !ok {

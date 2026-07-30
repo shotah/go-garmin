@@ -121,7 +121,7 @@ func TestCLIGenerator_SkipsEndpointsWithoutCLICommand(t *testing.T) {
 	r := NewRegistry()
 	r.Register(Endpoint{
 		Name:    "GetSleep",
-		MCPTool: "get_sleep",
+		MCPTool: "sleep_get",
 		// CLICommand not set
 		Handler: func(_ context.Context, _ any, _ *HandlerArgs) (any, error) {
 			return struct{}{}, nil
